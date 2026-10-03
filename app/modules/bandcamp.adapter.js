@@ -1,3 +1,5 @@
+import {US_STATE_ABBREVIATIONS} from "./us.states.js";
+
 // Bandcamp adapter: extract() runs in the page and returns plain data; enrich() turns it into Quire task fields in the background.
 
 const URGENT_PRIORITY = 2;
@@ -14,6 +16,9 @@ function extractBandcampData() {
     itemType: tralbum.item_type,
     releaseDate: tralbum.current?.release_date ?? tralbum.album_release_date ?? null,
     durations: (tralbum.trackinfo ?? []).map(track => track.duration),
+    // Bandcamp lists the artist's location as the last tag
+    tags: Array.from(document.querySelectorAll(".tralbum-tags a.tag"), tag => tag.textContent.trim()),
+    location: document.querySelector(".location")?.textContent.trim() ?? null,
   };
 }
 
@@ -38,6 +43,20 @@ function enrichBandcampData(data, now = new Date()) {
   return fields;
 }
 
+// The page's tags in order, minus the trailing location tag, plus location candidates, best first: the whole "City, Region" line
+// (for aliases), then its parts, then the state abbreviation.
+function bandcampTagCandidates(data) {
+  const parts = (data.location ?? "").split(",").map(part => part.trim()).filter(Boolean);
+  const tags = [...data.tags];
+  const last = tags[tags.length - 1];
+  if (last && parts.some(part => part.toLowerCase() === last.toLowerCase())) {
+    tags.pop();
+  }
+  const stateAbbreviation = US_STATE_ABBREVIATIONS[parts[1]?.toLowerCase()];
+  const location = [...(parts.length > 1 ? [data.location] : []), ...parts, ...(stateAbbreviation ? [stateAbbreviation] : [])];
+  return {location, tags};
+}
+
 export const BandcampAdapter = {
   id: "bandcamp",
   matches(url) {
@@ -50,4 +69,5 @@ export const BandcampAdapter = {
   },
   extract: extractBandcampData,
   enrich: enrichBandcampData,
+  tagCandidates: bandcampTagCandidates,
 };

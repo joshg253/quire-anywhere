@@ -7,6 +7,8 @@ import {ChromeService} from "./chrome.service.js";
 import {AppUtils} from "./app.utils.js";
 import {SiteRulesService} from "./site.rules.service.js";
 import {AdapterRegistry} from "./adapter.registry.js";
+import {TagMatcher} from "./tag.matcher.js";
+import {TagAliasService} from "./tag.aliases.service.js";
 
 export class ApiDataService {
   constructor() {}
@@ -36,6 +38,15 @@ export class ApiDataService {
   static async getAllOrganizations(orgsFunction) {
     ApiHttpService.getFromQuire(ApiConfig.getAllOrganizationsUrl, await this.getToken(), function(response) {
       orgsFunction(response);
+    });
+  }
+
+  // The project's tags as [{oid, name}], or null if they couldn't be loaded
+  static async getProjectTags(projectId) {
+    const url = ApiConfig.getProjectTagsUrl.replace("{projectOid}", projectId);
+    const token = await this.getToken();
+    return new Promise(resolve => {
+      ApiHttpService.getFromQuire(url, token, response => resolve(Array.isArray(response) ? response : null));
     });
   }
 
@@ -78,9 +89,25 @@ export class ApiDataService {
   // ADD (and then post)
   static async addPageTask(tab) {
     console.log("Adding page to Quire...");
-    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
-    let task = new Task(tab.title, tab.url);
-    task.addFields(await AdapterRegistry.enrichTab(tab));
+    const defaultProjId = await this.getDefaultProjectId();
+    const proj_id = await SiteRulesService.resolveProjectId(tab.url, defaultProjId);
+    const {fields, tagCandidates} = await AdapterRegistry.enrichTab(tab);
+    let description = tab.url;
+    // tags only for sites routed to their own project: the default project's library isn't curated for them
+    if (tagCandidates && proj_id !== defaultProjId) {
+      const projectTags = await this.getProjectTags(proj_id);
+      if (projectTags) {
+        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, await TagAliasService.getAliases());
+        if (oids.length > 0) {
+          fields.tags = oids;
+        }
+        if (unmatched.length > 0) {
+          description += `\n\nTags: ${unmatched.join(", ")}`;
+        }
+      }
+    }
+    let task = new Task(tab.title, description);
+    task.addFields(fields);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
     console.log(`Page url: ${tab.url}`);
