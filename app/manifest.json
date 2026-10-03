@@ -7,6 +7,9 @@
     "notifications",
     "contextMenus",
     "storage",
+    "alarms"
+  ],
+  "host_permissions": [
     "https://quire.io/*",
     "https://zicy.net/*",
     "http://zicy.net/*",
@@ -14,9 +17,10 @@
   ],
   "options_page": "./views/settings/settings.html",
   "background": {
-    "page": "./views/background/background.html"
+    "service_worker": "./views/background/background.js",
+    "type": "module"
   },
-  "browser_action": {
+  "action": {
     "default_title": "Quire Anywhere",
     "default_popup": "/views/popup/popup.html",
     "default_icon": {
@@ -38,9 +42,16 @@
     }
   ],
   "web_accessible_resources": [
-    "modules/content.utils.js",
-    "modules/google.docs.utils.js",
-    "images/quire-anywhere-16-clear.png"
+    {
+      "resources": [
+        "modules/content.utils.js",
+        "modules/google.docs.utils.js",
+        "images/quire-anywhere-16-clear.png"
+      ],
+      "matches": [
+        "https://docs.google.com/*"
+      ]
+    }
   ],
   "icons": {
     "16": "images/quire-anywhere-16-clear.png",
@@ -48,5 +59,5 @@
     "48": "images/quire-anywhere-48-clear.png",
     "128": "images/quire-anywhere-128-clear.png"
   },
-  "manifest_version": 2
+  "manifest_version": 3
 }

@@ -24,35 +24,36 @@ export class ApiDataService {
   }
 
   // GET FROM QUIRE
-  static getProjectsByOrganization(organizationId, projectsFunction) {
+  static async getProjectsByOrganization(organizationId, projectsFunction) {
     // Currently broken, 404 error
     const url = ApiConfig.getProjectsByOrganizationUrl.replace("{organizationOid}", organizationId);
-    ApiHttpService.getFromQuire(url, this.getToken(), function(response) {
+    ApiHttpService.getFromQuire(url, await this.getToken(), function(response) {
       projectsFunction(response);
     });
   }
 
-  static getAllOrganizations(orgsFunction) {
-    ApiHttpService.getFromQuire(ApiConfig.getAllOrganizationsUrl, this.getToken(), function(response) {
+  static async getAllOrganizations(orgsFunction) {
+    ApiHttpService.getFromQuire(ApiConfig.getAllOrganizationsUrl, await this.getToken(), function(response) {
       orgsFunction(response);
     });
   }
 
-  static getAllProjects(projectsFunction) {
+  static async getAllProjects(projectsFunction) {
     const url = ApiConfig.getAllProjectsUrl;
-    ApiHttpService.getFromQuire(url, this.getToken(), function(response) {
+    ApiHttpService.getFromQuire(url, await this.getToken(), function(response) {
       projectsFunction(response);
     });
   }
 
   // POST TO QUIRE
-  static postTaskIntoProject(task, project_id) {
+  static async postTaskIntoProject(task, project_id) {
     const url = ApiConfig.postNewTaskUrl.replace("{projectId}", project_id);
-    const allProjects = JSON.parse(StorageService.readLocal(StorageConstants.QUIRE.ALL_PROJECTS));
+    const allProjects = JSON.parse(await StorageService.readLocal(StorageConstants.QUIRE.ALL_PROJECTS));
     const defaultProjName = allProjects[project_id].name;
+    const token = await this.getToken();
     return new Promise((resolve) => {
-      ApiHttpService.postToQuire(url, this.getToken(), "Bearer", task.toJSON(),function(task) {
-        StorageService.addTaskToHistory(task);
+      ApiHttpService.postToQuire(url, token, "Bearer", task.toJSON(), async function(task) {
+        await StorageService.addTaskToHistory(task);
         ChromeService.createNotification(
             task.oid,
             `Task added`,
@@ -63,24 +64,20 @@ export class ApiDataService {
     });
   }
 
-  static deleteTaskByOid(taskOid) {
+  static async deleteTaskByOid(taskOid) {
     const url = ApiConfig.deleteTaskByOidUrl.replace("{taskOid}", taskOid);
-    const token = this.getToken();
-    return new Promise(async function (resolve, reject) {
-      const response = await ApiHttpService.deleteToQuire(url, token);
-      if (response.ok) {
-        resolve();
-      } else {
-        console.warn(`Failed to delete task by OID: ${taskOid}`)
-        reject(response);
-      }
-    });
+    const token = await this.getToken();
+    const response = await ApiHttpService.deleteToQuire(url, token);
+    if (!response.ok) {
+      console.warn(`Failed to delete task by OID: ${taskOid}`)
+      throw response;
+    }
   }
 
   // ADD (and then post)
-  static addPageTask(tab) {
+  static async addPageTask(tab) {
     console.log("Adding page to Quire...");
-    const proj_id = this.getDefaultProjectId();
+    const proj_id = await this.getDefaultProjectId();
     // let task = new Task(ApiFormatterService.formatHyperlink(tab.title, tab.url), ApiFormatterService.formatHyperlink(tab.url));
     let task = new Task(tab.title, tab.url);
     ApiDataService.postTaskIntoProject(task, proj_id);
@@ -88,28 +85,28 @@ export class ApiDataService {
     console.log(`Page url: ${tab.url}`);
     console.log(`Page title: ${tab.title}`);
     console.log(`Access token: ${this._accessToken}`);
-    console.log("org_id" + this.getDefaultOrganizationId());
+    console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }
 
-  static addSelectionTask(info, tab) {
+  static async addSelectionTask(info, tab) {
     console.log("Adding selection to Quire...");
 
-    const proj_id = this.getDefaultProjectId();
+    const proj_id = await this.getDefaultProjectId();
     let task = new Task(info.selectionText, "From: " + ApiFormatterService.formatHyperlink(tab.title, tab.url));
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
     console.log("Text: " + info.selectionText);
     console.log("From: " + tab.url);
     console.log(`Access token: ${this._accessToken}`);
-    console.log("org_id" + this.getDefaultOrganizationId());
+    console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }
 
-  static addLinkTask(info, tab) {
+  static async addLinkTask(info, tab) {
     console.log("Adding link to Quire...");
 
-    const proj_id = this.getDefaultProjectId();
+    const proj_id = await this.getDefaultProjectId();
     let task = new Task(
         ApiFormatterService.formatHyperlink(info.linkUrl, tab.url),
         "From: " + ApiFormatterService.formatHyperlink(tab.title, tab.url)
@@ -119,7 +116,7 @@ export class ApiDataService {
     console.log("Link: " + info.linkUrl);
     console.log("From: " + tab.url);
     console.log(`Access token: ${this._accessToken}`);
-    console.log("org_id" + this.getDefaultOrganizationId());
+    console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }
 
@@ -135,7 +132,7 @@ export class ApiDataService {
   }
 
   // HTML INJECTION
-  static fillSelectMenu(projects, projSelect) {
+  static async fillSelectMenu(projects, projSelect) {
     let allProjects = {};
     for (const p of projects) {
       allProjects[p.oid] = p;
@@ -166,10 +163,10 @@ export class ApiDataService {
     }));
 
 
-    StorageService.saveLocal(StorageConstants.QUIRE.ALL_PROJECTS, JSON.stringify(allProjects));
+    await StorageService.saveLocal(StorageConstants.QUIRE.ALL_PROJECTS, JSON.stringify(allProjects));
   }
 
-  static saveProjectAndOrganizationFromSelectMenuAsDefaultIds(serializedArray, projectRequiredCallback, successCallback) {
+  static async saveProjectAndOrganizationFromSelectMenuAsDefaultIds(serializedArray, projectRequiredCallback, successCallback) {
     // compile into one object
     let formData = [];
     for (const i in serializedArray) {
@@ -181,8 +178,11 @@ export class ApiDataService {
       const orgIdProjId = formData['org-id/proj-id'].split('/');
       const orgId = orgIdProjId[0];
       const projId = orgIdProjId[1];
-      StorageService.saveLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID, projId);
-      StorageService.saveLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID, orgId);
+      // issued together: the popup can close mid-save (window.onblur)
+      await Promise.all([
+        StorageService.saveLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID, projId),
+        StorageService.saveLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID, orgId),
+      ]);
       successCallback();
     }
   }
