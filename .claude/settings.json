@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./quire-anywhere/app.secret.php*)",
+      "Edit(./quire-anywhere/app.secret.php*)"
+    ]
+  }
+}
