@@ -5,6 +5,7 @@ import {Task} from "../models/task.model.js";
 import {StorageConstants} from "./storage.constants.js";
 import {ChromeService} from "./chrome.service.js";
 import {AppUtils} from "./app.utils.js";
+import {SiteRulesService} from "./site.rules.service.js";
 
 export class ApiDataService {
   constructor() {}
@@ -76,7 +77,7 @@ export class ApiDataService {
   // ADD (and then post)
   static async addPageTask(tab) {
     console.log("Adding page to Quire...");
-    const proj_id = await this.getDefaultProjectId();
+    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(tab.title, tab.url);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
@@ -90,7 +91,7 @@ export class ApiDataService {
   static async addSelectionTask(info, tab) {
     console.log("Adding selection to Quire...");
 
-    const proj_id = await this.getDefaultProjectId();
+    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(info.selectionText, `From: ${tab.title} - ${tab.url}`);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
@@ -104,7 +105,7 @@ export class ApiDataService {
   static async addLinkTask(info, tab) {
     console.log("Adding link to Quire...");
 
-    const proj_id = await this.getDefaultProjectId();
+    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(
         info.linkUrl,
         `From: ${tab.title} - ${tab.url}`
