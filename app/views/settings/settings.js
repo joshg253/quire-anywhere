@@ -3,6 +3,7 @@ import {StorageService} from "../../modules/storage.service.js";
 import {StorageConstants} from "../../modules/storage.constants.js";
 import {ChromeService} from "../../modules/chrome.service.js";
 import {SiteRulesService} from "../../modules/site.rules.service.js";
+import {TagAliasService} from "../../modules/tag.aliases.service.js";
 
 
 $('#version').text(ChromeService.getVersionName());
@@ -51,6 +52,7 @@ async function initialize() {
   }
   showDefaultProjectSelect();
   await initializeSiteRules();
+  await renderTagAliases();
   validateDefaultProjectSelect(!(defaultOrgId || defaultProjId));
 }
 
@@ -163,4 +165,38 @@ $("#rule-add").on("click", async function () {
 async function removeSiteRule(host) {
   await SiteRulesService.saveRules((await SiteRulesService.getRules()).filter(rule => rule.host !== host));
   await renderSiteRules();
+}
+
+// TAG ALIASES
+async function renderTagAliases() {
+  const list = $("#tag-aliases-list").empty();
+  for (const alias of await TagAliasService.getAliases()) {
+    const removeButton = $('<button type="button" class="btn btn-sm btn-outline-secondary">Remove</button>')
+        .on("click", () => removeTagAlias(alias.text));
+    list.append($("<tr>")
+        .append($("<td>").text(alias.text))
+        .append($("<td>").text(alias.tag))
+        .append($('<td class="text-right">').append(removeButton)));
+  }
+  $("#tag-aliases-container").removeClass("d-none");
+}
+
+$("#alias-add").on("click", async function () {
+  const text = $("#alias-text").val().trim();
+  const tag = $("#alias-tag").val().trim();
+  if (!text || !tag) {
+    $("#alias-invalid").removeClass("d-none");
+    return;
+  }
+  $("#alias-invalid").addClass("d-none");
+  const aliases = (await TagAliasService.getAliases()).filter(alias => alias.text.toLowerCase() !== text.toLowerCase());
+  aliases.push({text, tag});
+  await TagAliasService.saveAliases(aliases);
+  $("#alias-text, #alias-tag").val("");
+  await renderTagAliases();
+});
+
+async function removeTagAlias(text) {
+  await TagAliasService.saveAliases((await TagAliasService.getAliases()).filter(alias => alias.text !== text));
+  await renderTagAliases();
 }

@@ -33,6 +33,10 @@ export class Task {
     this._data["start"] = "2018-12-20T00:00:00.000Z";
   }
 
+  addFields(fields) {
+    Object.assign(this._data, fields);
+  }
+
   setData(data) {
     this._data = data;
   }

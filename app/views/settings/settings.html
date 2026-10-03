@@ -105,6 +105,30 @@
       </div>
     </div>
   </div>
+  <!-- TAG ALIASES -->
+  <div id="tag-aliases-container" class="d-none">
+    <div class="row">
+      <div class="col-12">
+        <h3 class="border-bottom p-2 mt-4">Tag Aliases</h3>
+        <p class="small text-muted">
+          When a page's tag or location matches the text on the left (not case sensitive), your tag on the right is used instead.
+        </p>
+        <table class="table table-sm">
+          <tbody id="tag-aliases-list"></tbody>
+        </table>
+        <div class="input-group mb-3">
+          <input type="text" id="alias-text" class="form-control" placeholder="Los Angeles, California">
+          <input type="text" id="alias-tag" class="form-control" placeholder="L.A.">
+          <div class="input-group-append">
+            <button id="alias-add" class="btn btn-outline-primary" type="button">Add</button>
+          </div>
+        </div>
+        <div id="alias-invalid" class="alert alert-danger small d-none" role="alert">
+          Enter both the page text and your tag.
+        </div>
+      </div>
+    </div>
+  </div>
   <br>
   <div class="row">
     <div class="col-12">

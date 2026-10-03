@@ -7,7 +7,9 @@
     "notifications",
     "contextMenus",
     "storage",
-    "alarms"
+    "alarms",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "https://quire.io/*",
