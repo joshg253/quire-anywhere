@@ -13,7 +13,7 @@ export class Task {
 
   constructor(name, description) {
     this._data['name'] = name;
-    this._data['description'] = description + "\n\n Quire Anywhere Chrome Extension";
+    this._data['description'] = description + "\n\n Quire Anywhere";
   }
 
   setRecurring() {
