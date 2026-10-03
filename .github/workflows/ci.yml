@@ -23,4 +23,4 @@ jobs:
           done < <(find app -name '*.js' -not -path 'app/libraries/*')
           exit $status
       - name: Client secret is not tracked
-        run: "! git ls-files | grep -i 'app.secret.php'"
+        run: '! git ls-files | grep -iE "(^|/)app\.secret\.php$"'
