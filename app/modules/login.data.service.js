@@ -87,13 +87,13 @@ export class LoginDataService {
   async logout(openQuireRevokePage) {
     await StorageService.clearAllStorage();
     if (openQuireRevokePage) {
-      window.open(AppConfig.quireAppSettingsUrl);
+      chrome.tabs.create({url: AppConfig.quireAppSettingsUrl});
     }
   }
 
   askQuireToGrantAccess() {
     this.saveState(() => {
-      window.open(this.authUrl);
+      chrome.tabs.create({url: this.authUrl});
     });
   }
 }

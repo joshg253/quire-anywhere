@@ -70,7 +70,6 @@ export class ChromeService {
     }
 
     static createNotification(id, title, description) {
-        this.registerNotificationOnClickListener();
         console.log('-----CREATE NOTIFICATION------');
         const options = {
             type: "basic",
@@ -87,16 +86,9 @@ export class ChromeService {
         chrome.notifications.create(id, options);
     }
 
-    static registerNotificationOnClickListener() {
-        // TODO: .hasListeners() only returns true if the listener has been registered from that page
-        // my hack is to just register the notification listener right before the notification is created
-        if (!chrome.notifications.onClicked.hasListeners()) {
-            chrome.notifications.onClicked.addListener(this.onNotificationClickedHandler);
-        }
-        // button listeners
-        if (!chrome.notifications.onButtonClicked.hasListeners()) {
-            chrome.notifications.onButtonClicked.addListener(this.onNotificationButtonClickedHandler);
-        }
+    static registerNotificationListeners() {
+        chrome.notifications.onClicked.addListener(this.onNotificationClickedHandler);
+        chrome.notifications.onButtonClicked.addListener(this.onNotificationButtonClickedHandler);
     }
 
     static async onNotificationClickedHandler(oid) {

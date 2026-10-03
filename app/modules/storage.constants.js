@@ -2,7 +2,6 @@ export class StorageConstants {
     static QUIRE = {
         ACCESS_TOKEN: "quire_access_token",
         REFRESH_TOKEN:  "quire_refresh_token",
-        REFRESH_TOKEN_EXPIRED: "quire_refresh_token_expired",
         STATE: "quire_state",
 
         EXPIRES_IN: "quire_expires_in",
@@ -19,7 +18,6 @@ export class StorageConstants {
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',
-        ID: 'login_id',
         TRIES: 'login_tries',
     };
     static TRUE = "true";
