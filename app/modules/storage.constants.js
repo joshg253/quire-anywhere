@@ -15,6 +15,7 @@ export class StorageConstants {
         DEFAULT_ORG_ID: "default_org_id",
         DEFAULT_PROJ_ID: "default_proj_id",
         DEFAULT_PROJ_URL: "default_proj_url",
+        SITE_RULES: "site_project_rules",
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',
