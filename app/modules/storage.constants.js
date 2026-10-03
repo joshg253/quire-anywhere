@@ -16,7 +16,8 @@ export class StorageConstants {
         DEFAULT_PROJ_ID: "default_proj_id",
         DEFAULT_PROJ_URL: "default_proj_url",
         SITE_RULES: "site_project_rules",
-        TAG_ALIASES: "tag_aliases",
+        TAG_ALIASES: "tag_aliases",  // legacy global list, migrated into ADAPTERS
+        ADAPTERS: "adapter_settings",
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',

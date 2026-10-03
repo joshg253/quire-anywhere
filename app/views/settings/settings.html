@@ -93,7 +93,7 @@
           <tbody id="site-rules-list"></tbody>
         </table>
         <div class="input-group mb-3">
-          <input type="text" id="rule-host" class="form-control" placeholder="bandcamp.com">
+          <input type="text" id="rule-host" class="form-control" placeholder="e.g. bandcamp.com">
           <select class="custom-select" id="rule-proj"></select>
           <div class="input-group-append">
             <button id="rule-add" class="btn btn-outline-primary" type="button">Add</button>
@@ -105,27 +105,15 @@
       </div>
     </div>
   </div>
-  <!-- TAG ALIASES -->
-  <div id="tag-aliases-container" class="d-none">
+  <!-- SITE ADAPTERS -->
+  <div id="adapters-container" class="d-none">
     <div class="row">
       <div class="col-12">
-        <h3 class="border-bottom p-2 mt-4">Tag Aliases</h3>
+        <h3 class="border-bottom p-2 mt-4">Site Adapters</h3>
         <p class="small text-muted">
-          When a page's tag or location matches the text on the left (not case sensitive), your tag on the right is used instead.
+          Enable an adapter to fill in task details (due date, estimate, tags, ...) from pages on that site. They are off until enabled.
         </p>
-        <table class="table table-sm">
-          <tbody id="tag-aliases-list"></tbody>
-        </table>
-        <div class="input-group mb-3">
-          <input type="text" id="alias-text" class="form-control" placeholder="Los Angeles, California">
-          <input type="text" id="alias-tag" class="form-control" placeholder="L.A.">
-          <div class="input-group-append">
-            <button id="alias-add" class="btn btn-outline-primary" type="button">Add</button>
-          </div>
-        </div>
-        <div id="alias-invalid" class="alert alert-danger small d-none" role="alert">
-          Enter both the page text and your tag.
-        </div>
+        <div id="adapters-list"></div>
       </div>
     </div>
   </div>
