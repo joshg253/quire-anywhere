@@ -6,6 +6,7 @@ import {StorageConstants} from "./storage.constants.js";
 import {ChromeService} from "./chrome.service.js";
 import {AppUtils} from "./app.utils.js";
 import {SiteRulesService} from "./site.rules.service.js";
+import {AdapterRegistry} from "./adapter.registry.js";
 
 export class ApiDataService {
   constructor() {}
@@ -79,6 +80,7 @@ export class ApiDataService {
     console.log("Adding page to Quire...");
     const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(tab.title, tab.url);
+    task.addFields(await AdapterRegistry.enrichTab(tab));
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
     console.log(`Page url: ${tab.url}`);
