@@ -1,4 +1,6 @@
 {
+  "model": "sonnet",
+  "effortLevel": "medium",
   "permissions": {
     "deny": [
       "Read(./quire-anywhere/app.secret.php*)",
