@@ -57,6 +57,12 @@ function bandcampTagCandidates(data) {
   return {location, tags};
 }
 
+// The user's rich-text "Year" custom field, in the same delta format Quire's own editor writes (e.g. [{"insert":"2026"}]).
+function bandcampCustomFields(data) {
+  const release = data.releaseDate ? new Date(data.releaseDate) : null;
+  return release && !isNaN(release) ? {Year: JSON.stringify([{insert: String(release.getUTCFullYear())}])} : {};
+}
+
 export const BandcampAdapter = {
   id: "bandcamp",
   matches(url) {
@@ -69,5 +75,6 @@ export const BandcampAdapter = {
   },
   extract: extractBandcampData,
   enrich: enrichBandcampData,
+  customFields: bandcampCustomFields,
   tagCandidates: bandcampTagCandidates,
 };

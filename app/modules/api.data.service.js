@@ -64,10 +64,15 @@ export class ApiDataService {
     const defaultProjName = allProjects[project_id].name;
     const token = await this.getToken();
     return new Promise((resolve) => {
-      ApiHttpService.postToQuire(url, token, "Bearer", task.toJSON(), async function(task) {
-        await StorageService.addTaskToHistory(task);
+      ApiHttpService.postToQuire(url, token, "Bearer", task.toJSON(), async function(created) {
+        if (!created?.oid) {
+          console.warn("Quire did not create the task", created);
+          resolve(false);
+          return;
+        }
+        await StorageService.addTaskToHistory(created);
         ChromeService.createNotification(
-            task.oid,
+            created.oid,
             `Task added`,
             `to ${defaultProjName}\nClick to open`
         );
@@ -91,10 +96,11 @@ export class ApiDataService {
     console.log("Adding page to Quire...");
     const defaultProjId = await this.getDefaultProjectId();
     const proj_id = await SiteRulesService.resolveProjectId(tab.url, defaultProjId);
-    const {fields, tagCandidates} = await AdapterRegistry.enrichTab(tab);
+    const {fields, customFields, tagCandidates} = await AdapterRegistry.enrichTab(tab);
     let description = tab.url;
-    // tags only for sites routed to their own project: the default project's library isn't curated for them
-    if (tagCandidates && proj_id !== defaultProjId) {
+    // tags and custom fields only for sites routed to their own project: the default project's library and fields aren't curated for them
+    const routed = proj_id !== defaultProjId;
+    if (tagCandidates && routed) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
         const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, await TagAliasService.getAliases());
@@ -106,9 +112,20 @@ export class ApiDataService {
         }
       }
     }
-    let task = new Task(tab.title, description);
-    task.addFields(fields);
-    ApiDataService.postTaskIntoProject(task, proj_id);
+    // Quire rejects the whole task for a field the project doesn't have, so fall back to less rather than lose the task
+    const attempts = [
+      {description, fields: routed ? {...fields, ...customFields} : fields},
+      {description, fields},
+      {description: tab.url, fields: {}},
+    ].filter((attempt, i, all) => i === all.findIndex(other => JSON.stringify(other) === JSON.stringify(attempt)));
+    for (const attempt of attempts) {
+      const task = new Task(tab.title, attempt.description);
+      task.addFields(attempt.fields);
+      if (await ApiDataService.postTaskIntoProject(task, proj_id)) {
+        break;
+      }
+      console.warn("Retrying with fewer fields");
+    }
     // debug
     console.log(`Page url: ${tab.url}`);
     console.log(`Page title: ${tab.title}`);
