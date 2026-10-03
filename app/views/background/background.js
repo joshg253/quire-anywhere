@@ -8,23 +8,23 @@ import {ChromeConstants} from "../../modules/chrome.constants.js";
 import {UpdateService} from "../../modules/update.service.js";
 
 
-StorageService.readAllFromStorage().then(UpdateService.updateLocalStorage);
+UpdateService.updateLocalStorage();
 
 function onContextMenuClickedHandler(info, tab) {
   const loginDataService = new LoginDataService();
-  loginDataService.isLoggedIn(function(loggedIn) {
+  loginDataService.isLoggedIn(async function(loggedIn) {
     if (!loggedIn) {
       // ignores what the state was and attempts a new one
       loginDataService.askQuireToGrantAccess();
       return;
     }
-    const org = StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID);
-    const proj =  StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID);
+    const org = await StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID);
+    const proj = await StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID);
     if (!(org && proj)) {
       window.open(chrome.runtime.getURL('/views/settings/settings.html'));
       return;
     }
-    const contextMenuEntries = JSON.parse(StorageService.readLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS));
+    const contextMenuEntries = JSON.parse(await StorageService.readLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS));
     console.log("-------------INFO----------------");
     console.log("contextMenuEntries: ", contextMenuEntries);
     console.log("info: ", info);
@@ -63,63 +63,63 @@ function setupListenersAndCheckers() {
   }, oneMinuteInMilliseconds);
 }
 
-function resetQuireStateChangeHandler() {
-  StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, false);
+async function resetQuireStateChangeHandler() {
+  await StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, false);
 }
-function onQuireStateChangeHandler() {
-  const attemptingLogin = StorageService.readLocal(StorageConstants.LOGIN.ATTEMPTING);
+async function onQuireStateChangeHandler() {
+  const attemptingLogin = await StorageService.readLocal(StorageConstants.LOGIN.ATTEMPTING);
   if (!(attemptingLogin === StorageConstants.TRUE)) {
     console.log(">> Attempting login...");
     let loginDataService = new LoginDataService();
     const attemptingLoginId = setInterval(function () {
           loginDataService.attemptLogin(responseHandler)
     }, 1000);
-    StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, StorageConstants.TRUE);
-    StorageService.saveLocal(StorageConstants.LOGIN.ID, attemptingLoginId);
-    StorageService.saveLocal(StorageConstants.LOGIN.TRIES, 100);
+    await StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, StorageConstants.TRUE);
+    await StorageService.saveLocal(StorageConstants.LOGIN.ID, attemptingLoginId);
+    await StorageService.saveLocal(StorageConstants.LOGIN.TRIES, 100);
   } else {
     console.log("Could not attempt login attemptingLogin: " + attemptingLogin);
   }
 }
 
-function responseHandler(response) {
-  function onLoginHandler() {
+async function responseHandler(response) {
+  async function onLoginHandler() {
     console.log(">> SUCCESS: Logged in successfully!");
 
-    const attemptingLoginId = parseInt(StorageService.readLocal(StorageConstants.LOGIN.ID));
+    const attemptingLoginId = parseInt(await StorageService.readLocal(StorageConstants.LOGIN.ID));
     clearInterval(attemptingLoginId);
 
-    StorageService.saveLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED, StorageConstants.FALSE);
-    StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, StorageConstants.FALSE);
-    onQuireExpiresInHandler();
+    await StorageService.saveLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED, StorageConstants.FALSE);
+    await StorageService.saveLocal(StorageConstants.LOGIN.ATTEMPTING, StorageConstants.FALSE);
+    await onQuireExpiresInHandler();
   }
 
-  function onHttpErrorHandler() {
-    let tries = parseInt(StorageService.readLocal(StorageConstants.LOGIN.TRIES)) - 1;
+  async function onHttpErrorHandler() {
+    let tries = parseInt(await StorageService.readLocal(StorageConstants.LOGIN.TRIES)) - 1;
 
     console.log(">> ERROR: Could not log in yet. tries left:", tries);
-    StorageService.saveLocal(StorageConstants.LOGIN.TRIES, tries);
+    await StorageService.saveLocal(StorageConstants.LOGIN.TRIES, tries);
   }
 
-  if (StorageService.readLocal(StorageConstants.QUIRE.LOGGED_IN) === StorageConstants.TRUE) {
-    onLoginHandler();
+  if (await StorageService.readLocal(StorageConstants.QUIRE.LOGGED_IN) === StorageConstants.TRUE) {
+    await onLoginHandler();
   } else if (response) {
     if (response.status === AppStatusKeys.TOKEN_SUCCESS) {
-      onLoginHandler();
+      await onLoginHandler();
     } else if (response.status === AppStatusKeys.HTTP_ERROR) {
-      onHttpErrorHandler();
+      await onHttpErrorHandler();
     }
   }
 }
 
 
-function onQuireExpiresInHandler() {
-  const quireExpiresIn = parseInt(StorageService.readLocal(StorageConstants.QUIRE.EXPIRES_IN));
+async function onQuireExpiresInHandler() {
+  const quireExpiresIn = parseInt(await StorageService.readLocal(StorageConstants.QUIRE.EXPIRES_IN));
   if (quireExpiresIn) {
     const quireExpiresInMilliseconds = quireExpiresIn * 1000;
     console.log(">>> Setting up onQuireExpiresInHandler quireExpiresInMilliseconds:", quireExpiresInMilliseconds);
-    setTimeout(function () {
-      StorageService.saveLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED, StorageConstants.TRUE);
+    setTimeout(async function () {
+      await StorageService.saveLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED, StorageConstants.TRUE);
     }, quireExpiresInMilliseconds);
   } else {
     console.log(">>> ERROR: Could not set up onQuireExpiresInHandler because quireExpiresIn:", quireExpiresIn);
@@ -128,8 +128,8 @@ function onQuireExpiresInHandler() {
 
 
 function quireRefreshTokenExpiredChecker() {
-  setInterval(function () {
-    const refreshTokenExpired = StorageService.readLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED);
+  setInterval(async function () {
+    const refreshTokenExpired = await StorageService.readLocal(StorageConstants.QUIRE.REFRESH_TOKEN_EXPIRED);
     console.log(">> quireRefreshTokenExpiredChecker refreshTokenExpired:", refreshTokenExpired);
     if (refreshTokenExpired === StorageConstants.TRUE) {
       const loginDataService = new LoginDataService();

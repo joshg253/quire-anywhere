@@ -25,25 +25,25 @@ $('#submit').on('click', function () {
 });
 
 // load organizations
-ApiDataService.getAllOrganizations(function(orgs) {
+ApiDataService.getAllOrganizations(async function(orgs) {
   let allOrgs = {};
   for (let i in orgs) {
     allOrgs[orgs[i].oid] = orgs[i];
   }
-  StorageService.saveLocal(StorageConstants.QUIRE.ALL_ORGANIZATIONS, JSON.stringify(allOrgs));
+  await StorageService.saveLocal(StorageConstants.QUIRE.ALL_ORGANIZATIONS, JSON.stringify(allOrgs));
 });
 
 // load projects
-ApiDataService.getAllProjects(function (projects) {
-  ApiDataService.fillSelectMenu(projects, $("#proj-select"));
-  initialize();
+ApiDataService.getAllProjects(async function (projects) {
+  await ApiDataService.fillSelectMenu(projects, $("#proj-select"));
+  await initialize();
 });
 
-function initialize() {
+async function initialize() {
 
 
-  const defaultProjId = StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID);
-  const defaultOrgId = StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID);
+  const defaultProjId = await StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_PROJ_ID);
+  const defaultOrgId = await StorageService.readLocal(StorageConstants.SETTINGS.DEFAULT_ORG_ID);
 
   if (defaultOrgId && defaultProjId) {
     $("#proj-select").val(`${defaultOrgId}/${defaultProjId}`);

@@ -15,7 +15,7 @@ export class ChromeService {
     }
 
     static async buildContextMenuItems() {
-        let contextMenuIds = JSON.parse(StorageService.readLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS));
+        let contextMenuIds = JSON.parse(await StorageService.readLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS));
         if (!contextMenuIds) {
             contextMenuIds = {};
         }
@@ -38,7 +38,7 @@ export class ChromeService {
                 console.log("Context menu item created!", contextMenuIds[contextMenuType], contextMenuProperties);
             }
         }
-        StorageService.saveLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS, JSON.stringify(contextMenuIds));
+        await StorageService.saveLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS, JSON.stringify(contextMenuIds));
     }
 
     static async isContextMenuItemPresent(id, item) {
@@ -61,19 +61,9 @@ export class ChromeService {
 
     static registerStorageListener(newValueCallback, storageKey) {
         if (newValueCallback instanceof Function && storageKey) {
-            window.addEventListener("storage", function (e) {
-                const key = StorageService.getStorageKeyFromEventKey(e.key);
-                if (key === storageKey) {
-                    newValueCallback(e.newValue);
-                }
-            });
             chrome.storage.onChanged.addListener(function(changes) {
-                // this function seems to fire twice, I don't know why
-                for(const key in changes) {
-                    const newStorageKey = StorageService.getStorageKeyFromEventKey(key);
-                    if (newStorageKey === storageKey) {
-                        newValueCallback(changes[key].newValue);
-                    }
+                if (changes[storageKey]) {
+                    newValueCallback(changes[storageKey].newValue);
                 }
             });
         }
@@ -109,9 +99,9 @@ export class ChromeService {
         }
     }
 
-    static onNotificationClickedHandler(oid) {
+    static async onNotificationClickedHandler(oid) {
         if (oid && oid !== "") {
-            chrome.tabs.create({url: StorageService.getAddedTaskUrlFromHistoryByOid(oid)});
+            chrome.tabs.create({url: await StorageService.getAddedTaskUrlFromHistoryByOid(oid)});
             chrome.notifications.clear(oid);
         }
     }
