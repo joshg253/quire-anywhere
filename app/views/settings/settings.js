@@ -3,7 +3,8 @@ import {StorageService} from "../../modules/storage.service.js";
 import {StorageConstants} from "../../modules/storage.constants.js";
 import {ChromeService} from "../../modules/chrome.service.js";
 import {SiteRulesService} from "../../modules/site.rules.service.js";
-import {TagAliasService} from "../../modules/tag.aliases.service.js";
+import {AdapterRegistry} from "../../modules/adapter.registry.js";
+import {AdapterSettingsService} from "../../modules/adapter.settings.service.js";
 
 
 $('#version').text(ChromeService.getVersionName());
@@ -52,7 +53,7 @@ async function initialize() {
   }
   showDefaultProjectSelect();
   await initializeSiteRules();
-  await renderTagAliases();
+  await renderAdapters();
   validateDefaultProjectSelect(!(defaultOrgId || defaultProjId));
 }
 
@@ -167,36 +168,96 @@ async function removeSiteRule(host) {
   await renderSiteRules();
 }
 
-// TAG ALIASES
-async function renderTagAliases() {
-  const list = $("#tag-aliases-list").empty();
-  for (const alias of await TagAliasService.getAliases()) {
-    const removeButton = $('<button type="button" class="btn btn-sm btn-outline-secondary">Remove</button>')
-        .on("click", () => removeTagAlias(alias.text));
-    list.append($("<tr>")
-        .append($("<td>").text(alias.text))
-        .append($("<td>").text(alias.tag))
-        .append($('<td class="text-right">').append(removeButton)));
+// SITE ADAPTERS
+async function renderAdapters() {
+  const list = $("#adapters-list").empty();
+  for (const adapter of AdapterRegistry.adapters) {
+    list.append(await buildAdapterCard(adapter));
   }
-  $("#tag-aliases-container").removeClass("d-none");
+  $("#adapters-container").removeClass("d-none");
 }
 
-$("#alias-add").on("click", async function () {
-  const text = $("#alias-text").val().trim();
-  const tag = $("#alias-tag").val().trim();
-  if (!text || !tag) {
-    $("#alias-invalid").removeClass("d-none");
-    return;
-  }
-  $("#alias-invalid").addClass("d-none");
-  const aliases = (await TagAliasService.getAliases()).filter(alias => alias.text.toLowerCase() !== text.toLowerCase());
-  aliases.push({text, tag});
-  await TagAliasService.saveAliases(aliases);
-  $("#alias-text, #alias-tag").val("");
-  await renderTagAliases();
-});
+async function updateAdapterSettings(adapter, change) {
+  const settings = await AdapterSettingsService.get(adapter);
+  change(settings);
+  await AdapterSettingsService.save(adapter, settings);
+}
 
-async function removeTagAlias(text) {
-  await TagAliasService.saveAliases((await TagAliasService.getAliases()).filter(alias => alias.text !== text));
-  await renderTagAliases();
+// Everything but the on/off switch stays hidden until the adapter is enabled.
+async function buildAdapterCard(adapter) {
+  const settings = await AdapterSettingsService.get(adapter);
+  const body = $('<div class="card-body border-top">').toggleClass("d-none", !settings.enabled);
+  const toggle = $(`<input type="checkbox" class="custom-control-input" id="adapter-${adapter.id}">`).prop("checked", settings.enabled);
+  toggle.on("change", async function () {
+    const enabled = this.checked;
+    body.toggleClass("d-none", !enabled);
+    await updateAdapterSettings(adapter, s => s.enabled = enabled);
+  });
+  for (const option of adapter.options ?? []) {
+    body.append(buildAdapterOption(adapter, option, settings.options[option.key]));
+  }
+  if (adapter.tagCandidates) {
+    body.append(await buildAliasEditor(adapter));
+  }
+  return $('<div class="card mb-3">')
+      .append($('<div class="card-header custom-control custom-switch ml-3 border-0 bg-transparent">')
+          .append(toggle)
+          .append($(`<label class="custom-control-label font-weight-bold" for="adapter-${adapter.id}">`).text(adapter.name)))
+      .append(body);
+}
+
+function buildAdapterOption(adapter, option, value) {
+  const select = $('<select class="custom-select">');
+  for (const choice of option.choices) {
+    select.append(new Option(choice.label, choice.value));
+  }
+  select.val(value).on("change", () => updateAdapterSettings(adapter, s => s.options[option.key] = select.val()));
+  return $('<div class="form-group">').append($("<label>").text(option.label)).append(select);
+}
+
+async function buildAliasEditor(adapter) {
+  const rows = $("<tbody>");
+  const textInput = $('<input type="text" class="form-control" placeholder="e.g. Los Angeles, California">');
+  const tagInput = $('<input type="text" class="form-control" placeholder="e.g. L.A.">');
+  const invalid = $('<div class="alert alert-danger small d-none" role="alert">Enter both the page text and your tag.</div>');
+
+  async function render() {
+    rows.empty();
+    for (const alias of (await AdapterSettingsService.get(adapter)).aliases) {
+      const removeButton = $('<button type="button" class="btn btn-sm btn-outline-secondary">Remove</button>').on("click", async () => {
+        await updateAdapterSettings(adapter, s => s.aliases = s.aliases.filter(other => other.text !== alias.text));
+        await render();
+      });
+      rows.append($("<tr>")
+          .append($("<td>").text(alias.text))
+          .append($("<td>").text(alias.tag))
+          .append($('<td class="text-right">').append(removeButton)));
+    }
+  }
+
+  const addButton = $('<button type="button" class="btn btn-outline-primary">Add</button>').on("click", async () => {
+    const text = textInput.val().trim();
+    const tag = tagInput.val().trim();
+    invalid.toggleClass("d-none", !!(text && tag));
+    if (!text || !tag) {
+      return;
+    }
+    await updateAdapterSettings(adapter, s => {
+      s.aliases = s.aliases.filter(alias => alias.text.toLowerCase() !== text.toLowerCase());
+      s.aliases.push({text, tag});
+    });
+    textInput.val("");
+    tagInput.val("");
+    await render();
+  });
+
+  await render();
+  return $("<div>")
+      .append($("<h6>Tag Aliases</h6>"))
+      .append($("<p class=\"small text-muted\">When a page's tag or location matches the text on the left (not case sensitive), " +
+          "your tag on the right is used instead.</p>"))
+      .append($('<table class="table table-sm">').append(rows))
+      .append($('<div class="input-group mb-3">').append(textInput).append(tagInput)
+          .append($('<div class="input-group-append">').append(addButton)))
+      .append(invalid);
 }

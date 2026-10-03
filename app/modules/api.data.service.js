@@ -8,7 +8,6 @@ import {AppUtils} from "./app.utils.js";
 import {SiteRulesService} from "./site.rules.service.js";
 import {AdapterRegistry} from "./adapter.registry.js";
 import {TagMatcher} from "./tag.matcher.js";
-import {TagAliasService} from "./tag.aliases.service.js";
 
 export class ApiDataService {
   constructor() {}
@@ -96,14 +95,14 @@ export class ApiDataService {
     console.log("Adding page to Quire...");
     const defaultProjId = await this.getDefaultProjectId();
     const proj_id = await SiteRulesService.resolveProjectId(tab.url, defaultProjId);
-    const {fields, customFields, tagCandidates} = await AdapterRegistry.enrichTab(tab);
+    const {fields, customFields, tagCandidates, title, aliases} = await AdapterRegistry.enrichTab(tab);
     let description = tab.url;
     // tags and custom fields only for sites routed to their own project: the default project's library and fields aren't curated for them
     const routed = proj_id !== defaultProjId;
     if (tagCandidates && routed) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
-        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, await TagAliasService.getAliases());
+        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, aliases);
         if (oids.length > 0) {
           fields.tags = oids;
         }
@@ -119,7 +118,7 @@ export class ApiDataService {
       {description: tab.url, fields: {}},
     ].filter((attempt, i, all) => i === all.findIndex(other => JSON.stringify(other) === JSON.stringify(attempt)));
     for (const attempt of attempts) {
-      const task = new Task(tab.title, attempt.description);
+      const task = new Task(title ?? tab.title, attempt.description);
       task.addFields(attempt.fields);
       if (await ApiDataService.postTaskIntoProject(task, proj_id)) {
         break;
