@@ -34,7 +34,8 @@ export class ChromeService {
             if (contextMenuId != null && await this.isContextMenuItemPresent(contextMenuId, contextMenuProperties)) {
                 console.log("Context menu item already exits", contextMenuId, contextMenuProperties);
             } else {
-                contextMenuIds[contextMenuType] = this.createContextMenuItem(contextMenuProperties);
+                // MV3 requires an explicit id; update() doesn't accept one, so it's added only here
+                contextMenuIds[contextMenuType] = this.createContextMenuItem({...contextMenuProperties, id: contextMenuType});
                 console.log("Context menu item created!", contextMenuIds[contextMenuType], contextMenuProperties);
             }
         }
