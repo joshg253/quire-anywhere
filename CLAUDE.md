@@ -20,7 +20,7 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
 - For multi-file or behavior-changing work, present a short plan before editing.
 - When work surfaces adjacent bugs, cleanup opportunities, or ideas beyond the task: fix true blockers (needed for the task to work
   correctly/safely) and small opportunistic fixes (same code path, low-risk, independently understandable, ≤~15 min); everything else is
-  a follow-up, noted in `TODO.md` rather than folded into the current change. At the end of the task, report what was requested, what
+  a follow-up, noted in `tmp/TODO.md` (untracked) rather than folded into the current change. At the end of the task, report what was requested, what
   was additionally fixed, and what was deferred.
 - Prefer existing platform and library capabilities (Chrome APIs, Quire's API, the vendored libraries) over custom code; never duplicate
   what they provide. Don't add new dependencies without asking.
@@ -51,6 +51,6 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
 
 ## Workflow
 - Main branch is `develop`. Feature work goes on `feature/<name>` branches; keep PRs small.
-- Before committing: state what to check manually in the reloaded extension, then update docs (README, `TODO.md`), then commit.
+- Before committing: state what to check manually in the reloaded extension, then update docs (README), then commit.
 - Docs-only changes go straight to `develop`, no PR.
-- Update `README.md` for user-visible changes; `TODO.md` for deferred work.
+- Update `README.md` for user-visible changes; `tmp/TODO.md` (untracked) for deferred work.
