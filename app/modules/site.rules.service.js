@@ -22,7 +22,12 @@ export class SiteRulesService {
     }
   }
 
-  // A rule for "bandcamp.com" matches that host and its subdomains; the longest (most specific) matching rule wins.
+  // "bandcamp.com" matches that host and its subdomains.
+  static hostMatches(hostname, host) {
+    return hostname === host || hostname.endsWith("." + host);
+  }
+
+  // The longest (most specific) matching rule wins.
   static findRule(rules, url) {
     const hostname = SiteRulesService.normalizeHost(url);
     if (!hostname) {
@@ -30,12 +35,14 @@ export class SiteRulesService {
     }
     return [...rules]
         .sort((a, b) => b.host.length - a.host.length)
-        .find(rule => hostname === rule.host || hostname.endsWith("." + rule.host)) ?? null;
+        .find(rule => SiteRulesService.hostMatches(hostname, rule.host)) ?? null;
   }
 
-  // The rule's project if one matches and the app can still see it, otherwise the default project.
-  static async resolveProjectId(url, defaultProjectId) {
-    const rule = SiteRulesService.findRule(await SiteRulesService.getRules(), url);
+  // The enabled adapter's project (adapterProjectId) if set, else the matching rule's, as long as the app can still see it; otherwise
+  // the default project.
+  static async resolveProjectId(url, defaultProjectId, adapterProjectId = "") {
+    const rule = adapterProjectId ? {host: "its adapter", projId: adapterProjectId}
+        : SiteRulesService.findRule(await SiteRulesService.getRules(), url);
     if (rule) {
       const allProjects = JSON.parse(await StorageService.readLocal(StorageConstants.QUIRE.ALL_PROJECTS)) ?? {};
       if (allProjects[rule.projId]) {

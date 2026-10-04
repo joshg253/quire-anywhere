@@ -1,46 +1,78 @@
 import {BandcampAdapter} from "./bandcamp.adapter.js";
 import {HltbAdapter} from "./hltb.adapter.js";
 import {AdapterSettingsService} from "./adapter.settings.service.js";
+import {SiteRulesService} from "./site.rules.service.js";
+import {renderTemplate} from "./adapter.utils.js";
 
-// Bundled site adapters only (no remote code). Each has: id, name, matches(url), extract() (runs in the page), enrich(data, options) ->
-// task fields. Optional: options (settings schema: [{key, label, default, choices: [{value, label}]}]), title(data), customFields(data)
-// and tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases for the adapter in Settings.
+// Bundled site adapters only (no remote code). Each has: id, name, hosts (default sites), extract() (runs in the page), enrich(data, options)
+// -> task fields. Optional: options (settings schema: [{key, label, default, choices: [{value, label}]}]), matchesPage(url) (limits
+// enriching to some pages of its sites), values(data) -> {year, ...} for the title and custom field templates (variables lists their names,
+// defaultTitle its default), defaultIgnoredTags, and tagCandidates(data) -> {location, tags}; tagCandidates also
+// turns on tag aliases and ignored tags for the adapter in Settings.
 const adapters = [BandcampAdapter, HltbAdapter];
 
-const EMPTY = () => ({fields: {}, customFields: {}, tagCandidates: null, title: null, aliases: []});
+const EMPTY = () => ({fields: {}, customFields: {}, tagCandidates: null, title: null, aliases: [], ignoredTags: []});
 
 export class AdapterRegistry {
   static get adapters() {
     return adapters;
   }
 
-  static findAdapter(url) {
-    return adapters.find(adapter => adapter.matches(url)) ?? null;
-  }
-
-  // {fields, customFields, tagCandidates, title, aliases} for the tab's page; empty when no enabled adapter applies or anything fails:
-  // enriching must never block adding the task. Needs activeTab, which the context menu click grants.
-  static async enrichTab(tab) {
-    const adapter = AdapterRegistry.findAdapter(tab.url);
-    if (!adapter) {
-      return EMPTY();
+  // {adapter, settings, site} for the enabled adapter that owns the URL's host (its own or a user-added one; the most specific wins).
+  static async findSite(url) {
+    const hostname = SiteRulesService.normalizeHost(url);
+    if (!hostname) {
+      return null;
     }
-    try {
+    let best = null;
+    for (const adapter of adapters) {
       const settings = await AdapterSettingsService.get(adapter);
       if (!settings.enabled) {
-        return EMPTY();
+        continue;
       }
+      for (const site of settings.sites) {
+        if (SiteRulesService.hostMatches(hostname, site.host) && site.host.length > (best?.site.host.length ?? 0)) {
+          best = {adapter, settings, site};
+        }
+      }
+    }
+    return best;
+  }
+
+  // The project chosen for the URL's adapter site, or the Site Rule / default project when none is set.
+  static async resolveProjectId(url, defaultProjectId) {
+    const found = await AdapterRegistry.findSite(url);
+    return SiteRulesService.resolveProjectId(url, defaultProjectId, found?.site.projId);
+  }
+
+  // Single-line text custom fields from the settings rows; rows whose template renders empty are skipped.
+  static customFields(settings, values) {
+    const rows = settings.fields.map(({name, template}) => [name, renderTemplate(template, values)]);
+    return Object.fromEntries(rows.filter(([name, text]) => name && text));
+  }
+
+  // {fields, customFields, tagCandidates, title, aliases, ignoredTags} for the tab's page; empty when no enabled adapter applies or anything fails:
+  // enriching must never block adding the task. Needs activeTab, which the context menu click grants.
+  static async enrichTab(tab) {
+    const found = await AdapterRegistry.findSite(tab.url);
+    if (!found || (found.adapter.matchesPage && !found.adapter.matchesPage(tab.url))) {
+      return EMPTY();
+    }
+    const {adapter, settings} = found;
+    try {
       const [injection] = await chrome.scripting.executeScript({target: {tabId: tab.id}, func: adapter.extract});
       const data = injection?.result;
       if (!data) {
         return EMPTY();
       }
+      const values = {title: tab.title, ...adapter.values?.(data)};
       return {
         fields: adapter.enrich(data, settings.options),
-        customFields: adapter.customFields?.(data) ?? {},
+        customFields: AdapterRegistry.customFields(settings, values),
         tagCandidates: adapter.tagCandidates?.(data) ?? null,
-        title: adapter.title?.(data) ?? null,
+        title: renderTemplate(settings.titleTemplate, values) || null,
         aliases: settings.aliases,
+        ignoredTags: settings.ignoredTags,
       };
     } catch (e) {
       console.warn(`${adapter.id} enrichment failed, adding the plain task`, e);

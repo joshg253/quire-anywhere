@@ -1,5 +1,4 @@
 import {US_STATE_ABBREVIATIONS} from "./us.states.js";
-import {richTextField} from "./adapter.utils.js";
 
 // Bandcamp adapter: extract() runs in the page and returns plain data; enrich() turns it into Quire task fields in the background.
 
@@ -58,25 +57,21 @@ function bandcampTagCandidates(data) {
   return {location, tags};
 }
 
-// The user's rich-text "Year" custom field.
-function bandcampCustomFields(data) {
+// Values for the title and custom field templates.
+function bandcampValues(data) {
   const release = data.releaseDate ? new Date(data.releaseDate) : null;
-  return release && !isNaN(release) ? {Year: richTextField(release.getUTCFullYear())} : {};
+  return {year: release && !isNaN(release) ? release.getUTCFullYear() : null};
 }
 
 export const BandcampAdapter = {
   id: "bandcamp",
   name: "Bandcamp",
-  matches(url) {
-    try {
-      const hostname = new URL(url).hostname;
-      return hostname === "bandcamp.com" || hostname.endsWith(".bandcamp.com");
-    } catch (e) {
-      return false;
-    }
-  },
+  hosts: ["bandcamp.com"],
   extract: extractBandcampData,
   enrich: enrichBandcampData,
-  customFields: bandcampCustomFields,
+  values: bandcampValues,
+  variables: ["title", "year"],
+  defaultTitle: "{title}",
+  defaultIgnoredTags: ["bandcamp", "music"],
   tagCandidates: bandcampTagCandidates,
 };

@@ -1,8 +1,11 @@
 import {StorageService} from "./storage.service.js";
 import {StorageConstants} from "./storage.constants.js";
 
-// Per-adapter settings in storage.sync: {<adapterId>: {enabled, aliases: [{text, tag}], options: {<key>: value}}}. Adapters are off until
-// enabled; aliases map page text -> project tag name, e.g. {text: "psychedelic", tag: "psych"}.
+// Per-adapter settings in storage.sync: {<adapterId>: {enabled, sites: [{host, projId}], titleTemplate, fields: [{name, template}],
+// aliases: [{text, tag}], ignoredTags: [page tag text], options: {<key>: value}}}.
+// Adapters are off until enabled. An enabled adapter owns its default hosts plus the user's extra `sites`; each site's `projId` picks the
+// project (empty = "Default": a matching Site Rule, else the default project). Aliases map page text -> project tag name,
+// e.g. {text: "psychedelic", tag: "psych"}. titleTemplate and the Text custom `fields` use {placeholders} from the adapter's values().
 export class AdapterSettingsService {
   static async getAll() {
     const stored = await StorageService.readSync(StorageConstants.SETTINGS.ADAPTERS);
@@ -27,7 +30,18 @@ export class AdapterSettingsService {
   static async get(adapter) {
     const saved = (await AdapterSettingsService.getAll())[adapter.id] ?? {};
     const options = Object.fromEntries((adapter.options ?? []).map(option => [option.key, option.default]));
-    return {enabled: saved.enabled === true, aliases: saved.aliases ?? [], options: {...options, ...saved.options}};
+    // The adapter's own hosts are always listed (project "" = default); saved entries override their project and add custom hosts
+    const savedSites = saved.sites ?? [];
+    const builtIn = (adapter.hosts ?? []).map(host => savedSites.find(site => site.host === host) ?? {host, projId: ""});
+    return {
+      enabled: saved.enabled === true,
+      sites: [...builtIn, ...savedSites.filter(site => !(adapter.hosts ?? []).includes(site.host))],
+      titleTemplate: saved.titleTemplate ?? adapter.defaultTitle ?? "{title}",
+      fields: saved.fields ?? [],
+      aliases: saved.aliases ?? [],
+      ignoredTags: saved.ignoredTags ?? adapter.defaultIgnoredTags ?? [],
+      options: {...options, ...saved.options},
+    };
   }
 
   static async save(adapter, settings) {

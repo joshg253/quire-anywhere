@@ -1,4 +1,9 @@
-// A rich-text custom field value in the same delta format Quire's own editor writes (e.g. [{"insert":"2026"}]).
-export function richTextField(text) {
-  return JSON.stringify([{insert: String(text)}]);
+// Fills {name} placeholders from values. A placeholder without a value is dropped along with the brackets or parentheses around it
+// ("Game [{year}]" -> "Game"), and the result is trimmed.
+export function renderTemplate(template, values) {
+  const filled = key => values[key] == null ? "" : String(values[key]);
+  return template
+      .replace(/\s*[\[(]\s*\{(\w+)\}\s*[\])]/g, (match, key) => filled(key) ? match.replace(`{${key}}`, filled(key)) : "")
+      .replace(/\{(\w+)\}/g, (match, key) => filled(key))
+      .trim();
 }

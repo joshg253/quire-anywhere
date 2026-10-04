@@ -25,19 +25,19 @@ function enrichHltbData(data, options) {
   return seconds > 0 ? {etc: Math.round(seconds)} : {};
 }
 
-// "Game Title [year]"; release dates HowLongToBeat doesn't know are "0000-00-00".
-function hltbTitle(data) {
+// Values for the title and custom field templates; release dates HowLongToBeat doesn't know are "0000-00-00".
+function hltbValues(data) {
   const year = Number(data.releaseDate?.slice(0, 4));
-  return year > 0 ? `${data.name} [${year}]` : data.name;
+  return {name: data.name, year: year > 0 ? year : null};
 }
 
 export const HltbAdapter = {
   id: "hltb",
   name: "HowLongToBeat",
-  matches(url) {
+  hosts: ["howlongtobeat.com"],
+  matchesPage(url) {
     try {
-      const {hostname, pathname} = new URL(url);
-      return (hostname === "howlongtobeat.com" || hostname.endsWith(".howlongtobeat.com")) && /^\/game\/\d+/.test(pathname);
+      return /^\/game\/\d+/.test(new URL(url).pathname);
     } catch (e) {
       return false;
     }
@@ -54,6 +54,8 @@ export const HltbAdapter = {
     ],
   }],
   extract: extractHltbData,
-  title: hltbTitle,
+  values: hltbValues,
+  variables: ["title", "name", "year"],
+  defaultTitle: "{name} [{year}]",
   enrich: enrichHltbData,
 };
