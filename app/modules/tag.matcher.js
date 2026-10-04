@@ -29,10 +29,12 @@ export class TagMatcher {
   }
 
   // candidates: {location: [strings, best first], tags: [strings in page order]}; libraryTags: [{oid, name}];
-  // aliases: [{text, tag}].
+  // aliases: [{text, tag}]; ignored: [text] to skip, as whole tags or as words of a longer tag.
   // Returns {oids, unmatched}: the location's tag first (first candidate that exists), then the page tags left to right. A tag with no
   // whole match is split into words and each word that matches a library tag is applied; the rest are listed as unmatched.
-  static match(candidates, libraryTags, aliases = []) {
+  static match(candidates, libraryTags, aliases = [], ignored = []) {
+    const ignoredKeys = new Set(ignored.map(TagMatcher.normalize));
+    const isIgnored = text => ignoredKeys.has(TagMatcher.normalize(text));
     const aliasMap = new Map(aliases.map(alias => [alias.text.trim().toLowerCase(), alias.tag]));
     const index = new Map();
     for (const tag of libraryTags) {
@@ -56,13 +58,18 @@ export class TagMatcher {
       }
     }
 
-    for (const text of candidates.tags) {
+    for (const candidate of candidates.tags.filter(tag => !isIgnored(tag))) {
+      // "experimental music" with "music" ignored is just "experimental"
+      const words = candidate.trim().split(/\s+/).filter(word => !isIgnored(word));
+      if (words.length === 0) {
+        continue;
+      }
+      const text = words.join(" ");
       const whole = TagMatcher.resolve(text, index, aliasMap);
       if (whole) {
         apply(whole);
         continue;
       }
-      const words = text.trim().split(/\s+/);
       const wordTags = words.map(word => TagMatcher.resolve(word, index, aliasMap));
       if (words.length === 1 || wordTags.every(tag => !tag)) {
         unmatched.push(TagMatcher.formatUnmatched(text));

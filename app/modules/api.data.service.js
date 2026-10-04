@@ -5,7 +5,6 @@ import {Task} from "../models/task.model.js";
 import {StorageConstants} from "./storage.constants.js";
 import {ChromeService} from "./chrome.service.js";
 import {AppUtils} from "./app.utils.js";
-import {SiteRulesService} from "./site.rules.service.js";
 import {AdapterRegistry} from "./adapter.registry.js";
 import {TagMatcher} from "./tag.matcher.js";
 
@@ -94,15 +93,13 @@ export class ApiDataService {
   static async addPageTask(tab) {
     console.log("Adding page to Quire...");
     const defaultProjId = await this.getDefaultProjectId();
-    const proj_id = await SiteRulesService.resolveProjectId(tab.url, defaultProjId);
-    const {fields, customFields, tagCandidates, title, aliases} = await AdapterRegistry.enrichTab(tab);
+    const proj_id = await AdapterRegistry.resolveProjectId(tab.url, defaultProjId);
+    const {fields, customFields, tagCandidates, title, aliases, ignoredTags} = await AdapterRegistry.enrichTab(tab);
     let description = tab.url;
-    // tags and custom fields only for sites routed to their own project: the default project's library and fields aren't curated for them
-    const routed = proj_id !== defaultProjId;
-    if (tagCandidates && routed) {
+    if (tagCandidates) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
-        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, aliases);
+        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, aliases, ignoredTags);
         if (oids.length > 0) {
           fields.tags = oids;
         }
@@ -113,7 +110,7 @@ export class ApiDataService {
     }
     // Quire rejects the whole task for a field the project doesn't have, so fall back to less rather than lose the task
     const attempts = [
-      {description, fields: routed ? {...fields, ...customFields} : fields},
+      {description, fields: {...fields, ...customFields}},
       {description, fields},
       {description: tab.url, fields: {}},
     ].filter((attempt, i, all) => i === all.findIndex(other => JSON.stringify(other) === JSON.stringify(attempt)));
@@ -136,7 +133,7 @@ export class ApiDataService {
   static async addSelectionTask(info, tab) {
     console.log("Adding selection to Quire...");
 
-    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
+    const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(info.selectionText, `From: ${tab.title} - ${tab.url}`);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
@@ -150,7 +147,7 @@ export class ApiDataService {
   static async addLinkTask(info, tab) {
     console.log("Adding link to Quire...");
 
-    const proj_id = await SiteRulesService.resolveProjectId(tab.url, await this.getDefaultProjectId());
+    const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(
         info.linkUrl,
         `From: ${tab.title} - ${tab.url}`
