@@ -1,8 +1,8 @@
 // Matches page tags against a project's existing tags. Only library tags are ever applied, always with the project's own spelling.
 export class TagMatcher {
-  // "Post-Metal", "post metal" and "postmetal" are the same tag
+  // "Post-Metal", "post metal" and "postmetal" are the same tag; zero-width characters (some page tags carry them) don't count
   static normalize(text) {
-    return text.toLowerCase().replace(/[\s\-_.]+/g, "");
+    return text.toLowerCase().replace(/[​-‏⁠﻿\s\-_.]+/g, "");
   }
 
   // An alias for the text (not case sensitive) wins over normalization, but only if its target tag exists in the library.

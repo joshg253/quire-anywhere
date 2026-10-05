@@ -17,14 +17,14 @@ function extractBandcampData() {
     releaseDate: tralbum.current?.release_date ?? tralbum.album_release_date ?? null,
     durations: (tralbum.trackinfo ?? []).map(track => track.duration),
     // Bandcamp lists the artist's location as the last tag
-    tags: Array.from(document.querySelectorAll(".tralbum-tags a.tag"), tag => tag.textContent.trim()),
+    tags: Array.from(document.querySelectorAll(".tralbum-tags a.tag"), tag => tag.textContent.replace(/[​-‏⁠﻿]/g, "").trim()),
     location: document.querySelector(".location")?.textContent.trim() ?? null,
   };
 }
 
 // Due = release date. Once released, Estimate (`etc`, seconds) = total length and Urgent if under 10 minutes. A future release date
-// gets the due date only: pre-orders can list durations that aren't real. Missing or zero durations skip the estimate rather than
-// use a partial sum.
+// gets the due date only: pre-orders can list durations that aren't real. Tracks with no duration (0, e.g. not streamable on the
+// album) are left out of the sum; with none at all there is no estimate.
 function enrichBandcampData(data, now = new Date()) {
   const fields = {};
   const release = data.releaseDate ? new Date(data.releaseDate) : null;
@@ -34,8 +34,9 @@ function enrichBandcampData(data, now = new Date()) {
       return fields;
     }
   }
-  if (data.durations.length > 0 && data.durations.every(duration => duration > 0)) {
-    fields.etc = Math.round(data.durations.reduce((total, duration) => total + duration, 0));
+  const known = data.durations.filter(duration => duration > 0);
+  if (known.length > 0) {
+    fields.etc = Math.round(known.reduce((total, duration) => total + duration, 0));
     if (fields.etc < URGENT_UNDER_SECONDS) {
       fields.priority = URGENT_PRIORITY;
     }
