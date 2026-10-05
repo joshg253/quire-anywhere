@@ -17,7 +17,8 @@ function extractSteamData() {
 // block adding the task.
 async function enrichSteamData(data, options) {
   try {
-    const response = await fetch(`https://api.augmentedsteam.com/app/${data.appId}/v2`);
+    // The signal also covers reading the body, so a stalled API can't hold up adding the task
+    const response = await fetch(`https://api.augmentedsteam.com/app/${data.appId}/v2`, {signal: AbortSignal.timeout(5000)});
     const hltb = (await response.json()).hltb;
     const minutes = hltb?.[options.estimate];
     return {...(minutes > 0 && {etc: Math.round(minutes * 60)}), ...(hltb?.url && {links: [hltb.url]})};

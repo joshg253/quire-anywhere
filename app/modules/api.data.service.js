@@ -112,7 +112,7 @@ export class ApiDataService {
     const attempts = [
       {description, fields: {...fields, ...customFields}},
       {description, fields},
-      {description: tab.url, fields: {}},
+      {description: [tab.url, ...links].join("\n"), fields: {}},
     ].filter((attempt, i, all) => i === all.findIndex(other => JSON.stringify(other) === JSON.stringify(attempt)));
     for (const attempt of attempts) {
       const task = new Task(title ?? tab.title, attempt.description);
