@@ -1,7 +1,12 @@
 #!/bin/bash
 # Blocks `git push` and `gh pr create` until the checklist is acknowledged by adding `# checklist-done` to the command.
+# Only a real invocation counts (start of a line, or after ; & | or &&), not text that merely mentions the commands.
 input=$(cat)
-if [[ "$input" == *checklist-done* ]]; then
+command=$(printf '%s' "$input" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).tool_input.command||"")}catch(e){}})')
+if ! printf '%s\n' "$command" | grep -Eq '(^|[;&|])[[:space:]]*(git push|gh pr create)\b'; then
+  exit 0
+fi
+if [[ "$command" == *checklist-done* ]]; then
   exit 0
 fi
 cat >&2 <<'MSG'
