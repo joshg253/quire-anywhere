@@ -56,6 +56,9 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
   changed, comments describing changed behavior) and `tmp/TODO.md`, then commit. Do this before every push or PR, not after.
 - Before starting feature work and before opening a PR, check open issues (`gh issue list`) for related or fixable ones; link them in the
   PR body (`Fixes #n`) when the change resolves them, and mention related ones that stay open.
+- These steps are enforced by hooks in `.claude/settings.json` (`.claude/hooks/`): `git push` and `gh pr create` are blocked until the
+  command ends with `# checklist-done`, and `gh pr create` then reminds you to process review comments. Don't append the marker until the
+  checklist is actually done.
 - After opening a PR, and whenever asked, read its review comments (`gh pr view <n> --comments`,
   `gh api repos/{owner}/{repo}/pulls/<n>/comments`; Sourcery posts here). Verify each against the code or live behavior: fix valid
   ones on the same branch, reply to the rest with why not, resolve the threads, and report which was which.
