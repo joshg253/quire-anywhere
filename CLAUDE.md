@@ -54,6 +54,8 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
 - Main branch is `develop`. Feature work goes on `feature/<name>` branches; keep PRs small.
 - Before committing: state what to check manually in the reloaded extension, then update docs (README, CLAUDE.md if rules or layout
   changed, comments describing changed behavior) and `tmp/TODO.md`, then commit. Do this before every push or PR, not after.
+- Before starting feature work and before opening a PR, check open issues (`gh issue list`) for related or fixable ones; link them in the
+  PR body (`Fixes #n`) when the change resolves them, and mention related ones that stay open.
 - After opening a PR, and whenever asked, read its review comments (`gh pr view <n> --comments`,
   `gh api repos/{owner}/{repo}/pulls/<n>/comments`; Sourcery posts here). Verify each against the code or live behavior: fix valid
   ones on the same branch, reply to the rest with why not, resolve the threads, and report which was which.
