@@ -35,7 +35,8 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
   explicitly.
 - Favor low-friction capture: one-click or keyboard-first add, sensible defaults (last-used project), no required fields.
 - Prefer small adapter-style modules for extracting from specific site types (like `google.docs.utils.js`) over hardwired branching.
-- Bump `version` and `version_name` in `app/manifest.json` only when releasing.
+- Versions in `app/manifest.json`: right after a release, bump `version` to the next one and set `version_name` to "Beta x.y.z-dev";
+  when releasing, drop the `-dev`.
 - Line wrapping: commit messages get no line breaks (one long line per paragraph). Everything else wraps at 140 columns; comments,
   docstrings, and prose are wrapped by hand. Only wrap new or edited paragraphs.
 - American spelling (-ize, not -ise). Docs and commit messages: as short as possible.

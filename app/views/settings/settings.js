@@ -199,6 +199,9 @@ async function buildAdapterCard(adapter) {
   for (const option of adapter.options ?? []) {
     body.append(buildAdapterOption(adapter, option, settings.options[option.key]));
   }
+  if (adapter.tags) {
+    body.append($('<p class="small text-muted">').text(`All tasks are tagged ${adapter.tags.join(", ")}.`));
+  }
   if (adapter.tagCandidates) {
     body.append(buildIgnoredTagsEditor(adapter, settings));
     body.append(await buildAliasEditor(adapter));

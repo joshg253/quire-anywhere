@@ -94,8 +94,8 @@ export class ApiDataService {
     console.log("Adding page to Quire...");
     const defaultProjId = await this.getDefaultProjectId();
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, defaultProjId);
-    const {fields, customFields, tagCandidates, title, aliases, ignoredTags} = await AdapterRegistry.enrichTab(tab);
-    let description = tab.url;
+    const {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} = await AdapterRegistry.enrichTab(tab);
+    let description = [tab.url, ...links].join("\n");
     if (tagCandidates) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
