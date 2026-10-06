@@ -36,6 +36,7 @@ function steamValues(data) {
 
 export const SteamAdapter = {
   id: "steam",
+  category: "Games",
   name: "Steam",
   hosts: ["store.steampowered.com"],
   matchesPage(url) {

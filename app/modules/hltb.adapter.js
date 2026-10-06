@@ -33,6 +33,7 @@ function hltbValues(data) {
 
 export const HltbAdapter = {
   id: "hltb",
+  category: "Games",
   name: "HowLongToBeat",
   hosts: ["howlongtobeat.com"],
   matchesPage(url) {

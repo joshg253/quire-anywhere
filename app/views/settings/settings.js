@@ -171,10 +171,30 @@ async function removeSiteRule(host) {
 // SITE ADAPTERS
 async function renderAdapters() {
   const list = $("#adapters-list").empty();
+  const categories = new Map();
   for (const adapter of AdapterRegistry.adapters) {
-    list.append(await buildAdapterCard(adapter));
+    const category = adapter.category ?? "Other";
+    categories.set(category, [...(categories.get(category) ?? []), adapter]);
+  }
+  let index = 0;
+  for (const [category, adapters] of categories) {
+    list.append(await buildCategorySection(category, adapters, index++));
   }
   $("#adapters-container").removeClass("d-none");
+}
+
+// A collapsible group of adapter cards, collapsed at first. The cards are indented under a left rule so they read as part of the group.
+async function buildCategorySection(category, adapters, index) {
+  const inner = $('<div class="border-left ml-3 pl-3 pt-3">');
+  for (const adapter of adapters) {
+    inner.append(await buildAdapterCard(adapter));
+  }
+  const header = $(`<button type="button" class="btn btn-light btn-block text-left font-weight-bold" data-toggle="collapse" ` +
+      `data-target="#adapter-category-${index}" aria-expanded="false">`)
+      .text(`${category} (${adapters.length})`);
+  return $('<div class="mb-2">')
+      .append(header)
+      .append($(`<div class="collapse" id="adapter-category-${index}">`).append(inner));
 }
 
 async function updateAdapterSettings(adapter, change) {

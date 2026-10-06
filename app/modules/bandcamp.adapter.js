@@ -66,6 +66,7 @@ function bandcampValues(data) {
 
 export const BandcampAdapter = {
   id: "bandcamp",
+  category: "Music",
   name: "Bandcamp",
   hosts: ["bandcamp.com"],
   extract: extractBandcampData,
