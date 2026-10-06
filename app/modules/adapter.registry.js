@@ -7,10 +7,11 @@ import {SiteRulesService} from "./site.rules.service.js";
 import {renderTemplate} from "./adapter.utils.js";
 
 // Bundled site adapters only (no remote code). Each has: id, name, hosts (default sites), extract() (runs in the page), enrich(data, options)
-// -> task fields (may be async; a `links` array of URLs goes under the page URL in the description instead). Optional: options (settings schema: [{key, label, default, choices: [{value, label}]}]), matchesPage(url) (limits
-// enriching to some pages of its sites), values(data) -> {year, ...} for the title and custom field templates (variables lists their names,
-// defaultTitle its default), defaultFields ([{name, template}] custom field rows), defaultIgnoredTags, tags (fixed tag names to apply),
-// and tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases and ignored tags for the adapter in Settings.
+// -> task fields (may be async; a `links` array of URLs goes under the page URL in the description instead). Optional: options (settings
+// schema: [{key, label, default, choices: [{value, label}]}]; no choices = free text), matchesPage(url) (limits enriching to some pages of
+// its sites), values(data, options) -> {year, ...} for the title and custom field templates (variables lists their names, defaultTitle its
+// default), defaultFields ([{name, template}] custom field rows), defaultIgnoredTags, tags (fixed tag names to apply), and
+// tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases and ignored tags for the adapter in Settings.
 const adapters = [BandcampAdapter, HltbAdapter, SteamAdapter, SpotifyAdapter];
 
 const EMPTY = () => ({fields: {}, links: [], customFields: {}, tagCandidates: null, title: null, aliases: [], ignoredTags: []});
@@ -53,8 +54,8 @@ export class AdapterRegistry {
     return Object.fromEntries(rows.filter(([name, text]) => name && text));
   }
 
-  // {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} for the tab's page; empty when no enabled adapter applies or anything fails:
-  // enriching must never block adding the task. Needs activeTab, which the context menu click grants.
+  // {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} for the tab's page; empty when no enabled adapter applies or
+  // anything fails: enriching must never block adding the task. Needs activeTab, which the context menu click grants.
   static async enrichTab(tab) {
     const found = await AdapterRegistry.findSite(tab.url);
     if (!found || (found.adapter.matchesPage && !found.adapter.matchesPage(tab.url))) {
@@ -67,7 +68,7 @@ export class AdapterRegistry {
       if (!data) {
         return EMPTY();
       }
-      const values = {title: tab.title, ...adapter.values?.(data)};
+      const values = {title: tab.title, ...adapter.values?.(data, settings.options)};
       const {links = [], ...fields} = await adapter.enrich(data, settings.options);
       return {
         fields,

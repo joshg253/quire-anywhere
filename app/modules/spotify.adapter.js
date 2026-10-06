@@ -1,6 +1,6 @@
 // Spotify adapter: album and playlist pages (/album/<id>, /playlist/<id>) in the web player. The page has no usable meta tags, so
 // extract() reads the header text, which looks like "Album\n<name>\n<artist>\n<artist>\n•\n2016\n•\n18 songs\n, \n1 hr 36 min". A playlist
-// has no artist or year; its length follows "<n> songs" the same way.
+// has no artist or year (the playlistArtist setting stands in); its length follows "<n> songs" the same way.
 
 // Injected into the page with chrome.scripting, so it must stay self-contained (no references outside this function).
 function extractSpotifyData() {
@@ -22,7 +22,8 @@ function extractSpotifyData() {
   const month = fullDate ? new Date(`${fullDate[1]} 1, 2000 UTC`).getUTCMonth() : NaN;
   return {
     name: lines[1],
-    artist: isPlaylist ? "Playlist" : artists[0] ?? null,
+    isPlaylist,
+    artist: artists[0] ?? null,
     year: isPlaylist ? null : Number(lines[dot + 1]) || null,
     releaseDate: isNaN(month) ? null : new Date(Date.UTC(Number(fullDate[3]), month, Number(fullDate[2]))).toISOString().slice(0, 10),
     hours: hours ? Number(hours) : 0,
@@ -56,9 +57,10 @@ function enrichSpotifyData(data, options, now = new Date()) {
   return fields;
 }
 
-// Values for the title and custom field templates.
-function spotifyValues(data) {
-  return {name: data.name, artist: data.artist, year: data.year, duration: formatDuration(data)};
+// Values for the title and custom field templates; a playlist's "artist" is the playlistArtist setting.
+function spotifyValues(data, options) {
+  const artist = data.isPlaylist ? options.playlistArtist : data.artist;
+  return {name: data.name, artist, year: data.year, duration: formatDuration(data)};
 }
 
 export const SpotifyAdapter = {
@@ -72,6 +74,7 @@ export const SpotifyAdapter = {
       return false;
     }
   },
+  options: [{key: "playlistArtist", label: "Artist for playlists", default: "Playlist"}],
   extract: extractSpotifyData,
   values: spotifyValues,
   variables: ["title", "name", "artist", "year", "duration"],

@@ -331,6 +331,12 @@ function buildFieldsEditor(adapter) {
 }
 
 function buildAdapterOption(adapter, option, value) {
+  if (!option.choices) {
+    // A free text option; empty goes back to the default
+    const input = $('<input type="text" class="form-control">').val(value).attr("placeholder", option.default)
+        .on("change", () => updateAdapterSettings(adapter, s => s.options[option.key] = input.val().trim() || option.default));
+    return $('<div class="form-group">').append($("<label>").text(option.label)).append(input);
+  }
   const select = $('<select class="custom-select">');
   for (const choice of option.choices) {
     select.append(new Option(choice.label, choice.value));
