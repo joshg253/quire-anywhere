@@ -12,8 +12,8 @@ function extractSpotifyData() {
   }
   // First line: the type (Album, Single, EP, Playlist), then the name. On albums the artists follow, up to the first dot.
   const artists = isPlaylist ? [] : lines.slice(2, dot);
-  // The total length follows "<n> songs", e.g. "18 songs , 1 hr 36 min"
-  const length = lines.slice(0, 30).join(" ").match(/\d[\d,]* songs?\W+((?:\d+ (?:hr|min|sec)\s*)+)/)?.[1] ?? "";
+  // The total length follows "<n> songs", e.g. "18 songs , 1 hr 36 min" ("about 1 hr 45 min" on playlists)
+  const length = lines.slice(0, 30).join(" ").match(/\d[\d,]* songs?\W+(?:about\s+)?((?:\d+ (?:hr|min|sec)\s*)+)/)?.[1] ?? "";
   const hours = length.match(/(\d+) hr/)?.[1];
   const minutes = length.match(/(\d+) min/)?.[1];
   const seconds = length.match(/(\d+) sec/)?.[1];
