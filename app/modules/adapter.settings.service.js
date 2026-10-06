@@ -37,7 +37,7 @@ export class AdapterSettingsService {
       enabled: saved.enabled === true,
       sites: [...builtIn, ...savedSites.filter(site => !(adapter.hosts ?? []).includes(site.host))],
       titleTemplate: saved.titleTemplate ?? adapter.defaultTitle ?? "{title}",
-      fields: saved.fields ?? [],
+      fields: saved.fields ?? adapter.defaultFields ?? [],
       aliases: saved.aliases ?? [],
       ignoredTags: saved.ignoredTags ?? adapter.defaultIgnoredTags ?? [],
       options: {...options, ...saved.options},

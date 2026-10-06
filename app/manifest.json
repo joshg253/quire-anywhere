@@ -1,7 +1,7 @@
 {
   "name": "Quire Anywhere",
-  "version": "0.3.0",
-  "version_name": "Beta 0.3.0",
+  "version": "0.3.1",
+  "version_name": "Beta 0.3.1-dev",
   "description": "The Best Chrome Extension For Quire!",
   "permissions": [
     "notifications",
@@ -15,7 +15,8 @@
     "https://quire.io/*",
     "https://zicy.net/*",
     "http://zicy.net/*",
-    "https://docs.google.com/*"
+    "https://docs.google.com/*",
+    "https://api.augmentedsteam.com/*"
   ],
   "options_page": "./views/settings/settings.html",
   "background": {
