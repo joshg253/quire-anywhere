@@ -65,6 +65,7 @@ function spotifyValues(data, options) {
 
 export const SpotifyAdapter = {
   id: "spotify",
+  category: "Music",
   name: "Spotify",
   hosts: ["open.spotify.com"],
   matchesPage(url) {
