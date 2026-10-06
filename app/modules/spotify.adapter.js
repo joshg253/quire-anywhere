@@ -32,9 +32,10 @@ function formatDuration({hours, minutes, seconds}) {
   return minutes > 0 || seconds > 0 ? `${minutes}:${String(seconds).padStart(2, "0")}` : null;
 }
 
-// Nothing to set on the task itself.
-function enrichSpotifyData() {
-  return {};
+// Estimate (`etc`, seconds) = the album's total length; none when the page shows no length.
+function enrichSpotifyData(data) {
+  const seconds = data.hours * 3600 + data.minutes * 60 + data.seconds;
+  return seconds > 0 ? {etc: seconds} : {};
 }
 
 // Values for the title and custom field templates.
