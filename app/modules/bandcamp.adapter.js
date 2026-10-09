@@ -25,7 +25,7 @@ function extractBandcampData() {
 // Due = release date. Once released, Estimate (`etc`, seconds) = total length and Urgent if under 10 minutes. A future release date
 // gets the due date only: pre-orders can list durations that aren't real. Tracks with no duration (0, e.g. not streamable on the
 // album) are left out of the sum; with none at all there is no estimate.
-function enrichBandcampData(data, now = new Date()) {
+function enrichBandcampData(data, options, now = new Date()) {
   const fields = {};
   const release = data.releaseDate ? new Date(data.releaseDate) : null;
   if (release && !isNaN(release)) {
