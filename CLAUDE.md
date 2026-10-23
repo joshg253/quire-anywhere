@@ -50,6 +50,8 @@ Chrome extension that adds tasks to Quire.io from the current page, a link, or a
 - Brief a subagent like a colleague with no memory of this conversation.
 
 ## Workflow
+- Always target the fork `joshg253/quire-anywhere` (issues, PRs, `gh api`); pass `-R joshg253/quire-anywhere` since `gh` defaults to upstream.
+  Ignore `hunterwilhelm/quire-anywhere` unless I mention upstream.
 - Main branch is `develop`. Feature work goes on `feature/<name>` branches; keep PRs small.
 - Commit locally, but don't push or open a PR until the user has tested the change and says to.
 - Before committing: state what to check manually in the reloaded extension, then update docs (README, CLAUDE.md if rules or layout
