@@ -135,7 +135,7 @@ export class ApiDataService {
     console.log("Adding selection to Quire...");
 
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
-    let task = new Task(info.selectionText, `From: ${tab.title} - ${tab.url}`);
+    let task = new Task(info.selectionText, `From: ${tab.title} - ${await AdapterRegistry.cleanUrl(tab.url)}`);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
     console.log("Text: " + info.selectionText);
@@ -151,7 +151,7 @@ export class ApiDataService {
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(
         await AdapterRegistry.cleanUrl(info.linkUrl),
-        `From: ${tab.title} - ${tab.url}`
+        `From: ${tab.title} - ${await AdapterRegistry.cleanUrl(tab.url)}`
     );
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug

@@ -42,10 +42,16 @@ export class AdapterRegistry {
     return best;
   }
 
-  // The URL without tracking parameters, per the owning adapter's cleanUrl(url); unchanged when no enabled adapter has one.
+  // The URL without tracking parameters, per the owning adapter's cleanUrl(url); unchanged when no enabled adapter has one or anything
+  // fails: cleaning must never block adding the task.
   static async cleanUrl(url) {
-    const found = await AdapterRegistry.findSite(url);
-    return found?.adapter.cleanUrl?.(url) ?? url;
+    try {
+      const found = await AdapterRegistry.findSite(url);
+      return found?.adapter.cleanUrl?.(url) ?? url;
+    } catch (e) {
+      console.warn("URL cleaning failed, using the original URL", e);
+      return url;
+    }
   }
 
   // The project chosen for the URL's adapter site, or the Site Rule / default project when none is set.
