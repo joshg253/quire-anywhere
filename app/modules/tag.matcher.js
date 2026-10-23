@@ -56,8 +56,9 @@ export class TagMatcher {
         apply(tag);
         break;
       }
-      // An alias for this location means the user chose its tag: don't fall back to its parts (e.g. "California" -> CA) if it's missing
-      if (aliasMap.has(candidate.trim().toLowerCase())) {
+      // An alias for the whole location line means the user chose its tag: don't fall back to its parts (e.g. "California" -> CA) if
+      // it's missing
+      if (i === 0 && aliasMap.has(candidate.trim().toLowerCase())) {
         break;
       }
     }
