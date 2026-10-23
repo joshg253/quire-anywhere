@@ -95,7 +95,8 @@ export class ApiDataService {
     const defaultProjId = await this.getDefaultProjectId();
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, defaultProjId);
     const {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} = await AdapterRegistry.enrichTab(tab);
-    let description = [tab.url, ...links].join("\n");
+    const pageUrl = await AdapterRegistry.cleanUrl(tab.url);
+    let description = [pageUrl, ...links].join("\n");
     if (tagCandidates) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
@@ -112,7 +113,7 @@ export class ApiDataService {
     const attempts = [
       {description, fields: {...fields, ...customFields}},
       {description, fields},
-      {description: [tab.url, ...links].join("\n"), fields: {}},
+      {description: [pageUrl, ...links].join("\n"), fields: {}},
     ].filter((attempt, i, all) => i === all.findIndex(other => JSON.stringify(other) === JSON.stringify(attempt)));
     for (const attempt of attempts) {
       const task = new Task(title ?? tab.title, attempt.description);
@@ -134,7 +135,7 @@ export class ApiDataService {
     console.log("Adding selection to Quire...");
 
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
-    let task = new Task(info.selectionText, `From: ${tab.title} - ${tab.url}`);
+    let task = new Task(info.selectionText, `From: ${tab.title} - ${await AdapterRegistry.cleanUrl(tab.url)}`);
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug
     console.log("Text: " + info.selectionText);
@@ -149,8 +150,8 @@ export class ApiDataService {
 
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, await this.getDefaultProjectId());
     let task = new Task(
-        info.linkUrl,
-        `From: ${tab.title} - ${tab.url}`
+        await AdapterRegistry.cleanUrl(info.linkUrl),
+        `From: ${tab.title} - ${await AdapterRegistry.cleanUrl(tab.url)}`
     );
     ApiDataService.postTaskIntoProject(task, proj_id);
     // debug

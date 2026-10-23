@@ -64,11 +64,27 @@ function bandcampValues(data) {
   return {year: release && !isNaN(release) ? release.getUTCFullYear() : null};
 }
 
+// Referral and campaign tracking only; anything else in the query is left alone in case a page needs it.
+function cleanBandcampUrl(url) {
+  try {
+    const parsed = new URL(url);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (key === "ref" || key.startsWith("utm_")) {
+        parsed.searchParams.delete(key);
+      }
+    }
+    return parsed.href;
+  } catch (e) {
+    return url;
+  }
+}
+
 export const BandcampAdapter = {
   id: "bandcamp",
   category: "Music",
   name: "Bandcamp",
   hosts: ["bandcamp.com"],
+  cleanUrl: cleanBandcampUrl,
   extract: extractBandcampData,
   enrich: enrichBandcampData,
   values: bandcampValues,
