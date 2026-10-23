@@ -2,7 +2,7 @@
 
 // Injected into the page with chrome.scripting, so it must stay self-contained (no references outside this function).
 async function extractEpicData() {
-  const slug = location.pathname.match(/^\/(?:[a-z]{2}(?:-[A-Za-z]{2,4})?\/)?p\/([^/?#]+)/)?.[1];
+  const slug = location.pathname.match(/^\/(?:[a-z]{2}(?:-[A-Za-z0-9]{2,4})?\/)?p\/([^/?#]+)/)?.[1];
   if (!slug) {
     return null;
   }
@@ -35,7 +35,7 @@ export const EpicAdapter = {
   hosts: ["store.epicgames.com"],
   matchesPage(url) {
     try {
-      return /^\/(?:[a-z]{2}(?:-[A-Za-z]{2,4})?\/)?p\//.test(new URL(url).pathname);
+      return /^\/(?:[a-z]{2}(?:-[A-Za-z0-9]{2,4})?\/)?p\//.test(new URL(url).pathname);
     } catch (e) {
       return false;
     }
