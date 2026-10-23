@@ -3,8 +3,7 @@
 Chrome extension that adds tasks to Quire.io from the current page, a link, or a Google Docs selection.
 
 ## Layout
-- `app/` is the extension root (load unpacked from here). Manifest V2: background page, `browser_action`, content script on Google Docs.
-  Don't migrate to MV3 unless asked.
+- `app/` is the extension root (load unpacked from here). Manifest V3: module service worker, `action`, content script on Google Docs.
 - `app/views/` (popup, settings, background) is UI; `app/modules/` holds services (`api.*`, `login.*`, `chrome.service.js`,
   `translation.*`, `update.service.js`), storage (`storage.service.js`), and site-specific extraction (`content.utils.js`,
   `google.docs.utils.js`); `app/models/` holds data models; `app/scripts/content.js` is the content-script entry point.

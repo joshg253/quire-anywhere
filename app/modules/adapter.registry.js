@@ -9,7 +9,7 @@ import {renderTemplate} from "./adapter.utils.js";
 // Bundled site adapters only (no remote code). Each has: id, name, hosts (default sites), extract() (runs in the page), enrich(data, options)
 // -> task fields (may be async; a `links` array of URLs goes under the page URL in the description instead). Optional: options (settings
 // schema: [{key, label, default, choices: [{value, label}]}]; no choices = free text), matchesPage(url) (limits enriching to some pages of
-// its sites), values(data, options) -> {year, ...} for the title and custom field templates (variables lists their names, defaultTitle its
+// its sites), cleanUrl(url) -> the URL minus tracking parameters (for the task description and link tasks), values(data, options) -> {year, ...} for the title and custom field templates (variables lists their names, defaultTitle its
 // default), defaultFields ([{name, template}] custom field rows), defaultIgnoredTags, tags (fixed tag names to apply), and
 // tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases and ignored tags for the adapter in Settings.
 const adapters = [BandcampAdapter, HltbAdapter, SteamAdapter, SpotifyAdapter];
@@ -40,6 +40,12 @@ export class AdapterRegistry {
       }
     }
     return best;
+  }
+
+  // The URL without tracking parameters, per the owning adapter's cleanUrl(url); unchanged when no enabled adapter has one.
+  static async cleanUrl(url) {
+    const found = await AdapterRegistry.findSite(url);
+    return found?.adapter.cleanUrl?.(url) ?? url;
   }
 
   // The project chosen for the URL's adapter site, or the Site Rule / default project when none is set.
