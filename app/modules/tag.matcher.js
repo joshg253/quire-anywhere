@@ -50,7 +50,7 @@ export class TagMatcher {
       }
     };
 
-    for (const candidate of candidates.location) {
+    for (const [i, candidate] of candidates.location.entries()) {
       const tag = TagMatcher.resolve(candidate, index, aliasMap);
       if (tag) {
         apply(tag);
