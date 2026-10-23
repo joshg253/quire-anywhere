@@ -50,10 +50,15 @@ export class TagMatcher {
       }
     };
 
-    for (const candidate of candidates.location) {
+    for (const [i, candidate] of candidates.location.entries()) {
       const tag = TagMatcher.resolve(candidate, index, aliasMap);
       if (tag) {
         apply(tag);
+        break;
+      }
+      // An alias for the whole location line means the user chose its tag: don't fall back to its parts (e.g. "California" -> CA) if
+      // it's missing
+      if (i === 0 && aliasMap.has(candidate.trim().toLowerCase())) {
         break;
       }
     }
