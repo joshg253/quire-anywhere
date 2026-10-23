@@ -203,14 +203,27 @@ async function updateAdapterSettings(adapter, change) {
   await AdapterSettingsService.save(adapter, settings);
 }
 
-// Everything but the on/off switch stays hidden until the adapter is enabled.
+// Everything but the on/off switch stays hidden until the adapter is enabled, and a caret collapses or expands it (collapsed at first).
 async function buildAdapterCard(adapter) {
   const settings = await AdapterSettingsService.get(adapter);
-  const body = $('<div class="card-body border-top">').toggleClass("d-none", !settings.enabled);
+  let enabled = settings.enabled;
+  let expanded = false;
+  const body = $('<div class="card-body border-top d-none">');
+  const caret = $('<button type="button" class="btn btn-sm btn-link text-muted ml-auto mr-2" aria-label="Expand or collapse">');
+  const refresh = () => {
+    body.toggleClass("d-none", !(enabled && expanded));
+    caret.toggleClass("d-none", !enabled).text(expanded ? "▲" : "▼");
+  };
+  caret.on("click", () => {
+    expanded = !expanded;
+    refresh();
+  });
+  refresh();
   const toggle = $(`<input type="checkbox" class="custom-control-input" id="adapter-${adapter.id}">`).prop("checked", settings.enabled);
   toggle.on("change", async function () {
-    const enabled = this.checked;
-    body.toggleClass("d-none", !enabled);
+    enabled = this.checked;
+    expanded = enabled;
+    refresh();
     await updateAdapterSettings(adapter, s => s.enabled = enabled);
   });
   body.append(buildSitesEditor(adapter));
@@ -227,9 +240,11 @@ async function buildAdapterCard(adapter) {
     body.append(await buildAliasEditor(adapter));
   }
   return $('<div class="card mb-3">')
-      .append($('<div class="card-header custom-control custom-switch ml-3 border-0 bg-transparent">')
-          .append(toggle)
-          .append($(`<label class="custom-control-label font-weight-bold" for="adapter-${adapter.id}">`).text(adapter.name)))
+      .append($('<div class="card-header d-flex align-items-center border-0 bg-transparent">')
+          .append($('<div class="custom-control custom-switch ml-3">')
+              .append(toggle)
+              .append($(`<label class="custom-control-label font-weight-bold" for="adapter-${adapter.id}">`).text(adapter.name)))
+          .append(caret))
       .append(body);
 }
 
@@ -369,13 +384,13 @@ const byText = (a, b) => a.localeCompare(b, undefined, {sensitivity: "base"});
 
 // Ignored tags as removable chips, kept sorted alphabetically; the input adds one or several (comma separated).
 function buildIgnoredTagsEditor(adapter, settings) {
-  const chips = $('<div class="mb-2">');
+  const chips = $('<div class="d-flex flex-wrap mb-2">');
   const input = $('<input type="text" class="form-control" placeholder="e.g. music, album">');
 
   function render(tags) {
     chips.empty();
     for (const tag of tags) {
-      const remove = $('<button type="button" class="close ml-2" aria-label="Remove">&times;</button>').on("click", async () => {
+      const remove = $('<button type="button" class="close float-none ml-2 text-white" aria-label="Remove">&times;</button>').on("click", async () => {
         await updateAdapterSettings(adapter, s => s.ignoredTags = s.ignoredTags.filter(other => other !== tag));
         render(tags.filter(other => other !== tag));
       });
@@ -416,55 +431,80 @@ function buildIgnoredTagsEditor(adapter, settings) {
           "They are neither applied nor listed under \"Tags:\" in the description."));
 }
 
+// Your tag first, then the page texts that map to it ("; " separated, since locations like "Los Angeles, California" contain commas).
+// Stored as one {text, tag} per page text; tags and texts are matched ignoring case, so a tag has one row however it is spelled.
+const splitTexts = value => value.split(";").map(text => text.trim()).filter(Boolean);
+
+// Sets the page texts for a tag (replacing its earlier ones; none removes the tag) and takes them off any other tag.
+function setAliasTexts(aliases, tag, texts) {
+  const lower = text => text.toLowerCase();
+  const claimed = new Set(texts.map(lower));
+  const kept = aliases.filter(alias => lower(alias.tag) !== lower(tag) && !claimed.has(lower(alias.text)));
+  const unique = texts.filter((text, i) => texts.findIndex(other => lower(other) === lower(text)) === i);
+  return [...kept, ...unique.map(text => ({text, tag}))];
+}
+
 async function buildAliasEditor(adapter) {
   const rows = $("<tbody>");
-  const textInput = $('<input type="text" class="form-control" placeholder="e.g. Los Angeles, California">');
-  const tagInput = $('<input type="text" class="form-control" placeholder="e.g. L.A.">');
-  const invalid = $('<div class="alert alert-danger small d-none" role="alert">Enter both the page text and your tag.</div>');
+  const tagInput = $('<input type="text" class="form-control" placeholder="Your tag, e.g. L.A.">');
+  const textInput = $('<input type="text" class="form-control" placeholder="Page texts, e.g. Los Angeles, California; LA">');
+  const invalid = $('<div class="alert alert-danger small d-none" role="alert">Enter your tag and at least one page text.</div>');
   const filter = $('<input type="search" class="form-control form-control-sm mb-2" placeholder="Filter aliases">')
       .on("input", () => render());
 
-  // Matching is by exact text, so the order never changes behavior: list alphabetically and let the filter narrow a long list.
+  // Matching is by exact text, so the order never changes behavior: list by tag A-Z and let the filter narrow a long list.
   async function render() {
     rows.empty();
     const needle = filter.val().trim().toLowerCase();
-    const aliases = (await AdapterSettingsService.get(adapter)).aliases.slice().sort((a, b) => byText(a.text, b.text));
-    for (const alias of aliases.filter(a => !needle || `${a.text} ${a.tag}`.toLowerCase().includes(needle))) {
+    const groups = new Map();
+    for (const alias of (await AdapterSettingsService.get(adapter)).aliases) {
+      const key = alias.tag.toLowerCase();
+      groups.set(key, {tag: groups.get(key)?.tag ?? alias.tag, texts: [...(groups.get(key)?.texts ?? []), alias.text]});
+    }
+    const shown = [...groups.values()].sort((a, b) => byText(a.tag, b.tag))
+        .filter(group => !needle || `${group.tag} ${group.texts.join(" ")}`.toLowerCase().includes(needle));
+    for (const group of shown) {
+      const texts = $('<input type="text" class="form-control form-control-sm">').val(group.texts.sort(byText).join("; "))
+          .on("change", async () => {
+            await updateAdapterSettings(adapter, s => s.aliases = setAliasTexts(s.aliases, group.tag, splitTexts(texts.val())));
+            await render();
+          });
       const removeButton = $('<button type="button" class="btn btn-sm btn-outline-secondary">Remove</button>').on("click", async () => {
-        await updateAdapterSettings(adapter, s => s.aliases = s.aliases.filter(other => other.text !== alias.text));
+        await updateAdapterSettings(adapter, s => s.aliases = setAliasTexts(s.aliases, group.tag, []));
         await render();
       });
       rows.append($("<tr>")
-          .append($("<td>").text(alias.text))
-          .append($("<td>").text(alias.tag))
+          .append($("<td>").text(group.tag))
+          .append($("<td>").append(texts))
           .append($('<td class="text-right">').append(removeButton)));
     }
   }
 
   const addButton = $('<button type="button" class="btn btn-outline-primary">Add</button>').on("click", async () => {
-    const text = textInput.val().trim();
     const tag = tagInput.val().trim();
-    invalid.toggleClass("d-none", !!(text && tag));
-    if (!text || !tag) {
+    const texts = splitTexts(textInput.val());
+    invalid.toggleClass("d-none", !!(tag && texts.length));
+    if (!tag || !texts.length) {
       return;
     }
     await updateAdapterSettings(adapter, s => {
-      s.aliases = s.aliases.filter(alias => alias.text.toLowerCase() !== text.toLowerCase());
-      s.aliases.push({text, tag});
+      const existing = s.aliases.filter(alias => alias.tag.toLowerCase() === tag.toLowerCase());
+      s.aliases = setAliasTexts(s.aliases, existing[0]?.tag ?? tag, [...existing.map(alias => alias.text), ...texts]);
     });
-    textInput.val("");
     tagInput.val("");
+    textInput.val("");
     await render();
   });
 
   await render();
   return $("<div>")
       .append($("<h6>Tag Aliases</h6>"))
-      .append($("<p class=\"small text-muted\">When a page's tag or location matches the text on the left (not case sensitive), " +
-          "your tag on the right is used instead.</p>"))
+      .append($("<p class=\"small text-muted\">When a page's tag or location matches one of the page texts (not case sensitive; separate " +
+          "several with \";\"), your tag is used instead. A matching whole location line like \"Los Angeles, California\" is used " +
+          "before its parts, so it never falls back to just \"California\".</p>"))
       .append(filter)
       .append($('<div style="max-height: 20rem; overflow-y: auto;">').append($('<table class="table table-sm">').append(rows)))
-      .append($('<div class="input-group mb-3">').append(textInput).append(tagInput)
+      .append($('<div class="input-group mb-3">').append(tagInput).append(textInput)
           .append($('<div class="input-group-append">').append(addButton)))
       .append(invalid);
 }
