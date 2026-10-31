@@ -6,11 +6,28 @@ import {AppStatusKeys} from "../../modules/app.status.keys.js";
 import {StorageConstants} from "../../modules/storage.constants.js";
 import {ChromeConstants} from "../../modules/chrome.constants.js";
 import {UpdateService} from "../../modules/update.service.js";
+import {collectLinks} from "../../modules/links.collector.js";
 
 const REFRESH_ALARM = "refreshToken";
 const LOGIN_POLL_MILLISECONDS = 1000;
 const LOGIN_MAX_TRIES = 100;
 const REFRESH_RETRY_MINUTES = 1;
+
+// Collects the page's (or selection's) links and hands them to the dialog through session storage. activeTab, granted by the menu click,
+// allows the injection.
+async function openLinksDialog(tab, selectionOnly) {
+  let links = [];
+  try {
+    const [injection] = await chrome.scripting.executeScript({target: {tabId: tab.id}, func: collectLinks, args: [selectionOnly]});
+    links = injection?.result ?? [];
+  } catch (e) {
+    console.warn("Could not collect links", e);
+  }
+  await chrome.storage.session.set({
+    [StorageConstants.SESSION.PENDING_LINKS]: {pageUrl: tab.url, pageTitle: tab.title, links, selectedByDefault: selectionOnly},
+  });
+  chrome.windows.create({url: chrome.runtime.getURL("/views/links/links.html"), type: "popup", width: 760, height: 720});
+}
 
 function onContextMenuClickedHandler(info, tab) {
   const loginDataService = new LoginDataService();
@@ -32,6 +49,10 @@ function onContextMenuClickedHandler(info, tab) {
     console.log("info: ", info);
     console.log("tab: ", tab);
     switch (info.menuItemId) {
+      case ChromeConstants.LINKS_MENUS.PAGE.id:
+      case ChromeConstants.LINKS_MENUS.SELECTION.id:
+        openLinksDialog(tab, info.menuItemId === ChromeConstants.LINKS_MENUS.SELECTION.id);
+        break;
       case contextMenuEntries[ChromeConstants.CONTEXT_MENU_TYPES.PAGE]:
         ApiDataService.addPageTask(tab);
         break;

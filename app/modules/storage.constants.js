@@ -18,6 +18,10 @@ export class StorageConstants {
         SITE_RULES: "site_project_rules",
         TAG_ALIASES: "tag_aliases",  // legacy global list, migrated into ADAPTERS
         ADAPTERS: "adapter_settings",
+        LINKS_TITLE_SOURCE: "links_title_source",  // "text" | "url" for the batch dialog
+    };
+    static SESSION = {
+        PENDING_LINKS: "pending_links",
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',

@@ -48,6 +48,7 @@ export class ApiHttpService {
       }
       responseFunction(result);
     } else {
+      console.warn(`POST ${url} failed: ${response.status}`, await response.text().catch(() => ""));
       responseFunction(AppConfig.httpError);
     }
   }

@@ -5,10 +5,14 @@ export class TagMatcher {
     return text.toLowerCase().replace(/[​-‏⁠﻿\s\-_.]+/g, "");
   }
 
-  // An alias for the text (not case sensitive) wins over normalization, but only if its target tag exists in the library.
+  // An alias for the text (not case sensitive) wins over normalization. Its target is the library tag, or {create: name} when the
+  // library has none yet (the user named that tag, so it is created); otherwise the text matches the library by itself.
   static resolve(text, index, aliases) {
-    const target = aliases.get(text.trim().toLowerCase());
-    return (target && TagMatcher.lookup(target, index)) || TagMatcher.lookup(text, index);
+    const target = aliases.get(text.trim().toLowerCase())?.trim();
+    if (target) {
+      return TagMatcher.lookup(target, index) ?? {create: target};
+    }
+    return TagMatcher.lookup(text, index);
   }
 
   // Two library tags that normalize alike: an exact (case-insensitive) match to the text wins, otherwise none (ambiguous).
@@ -30,8 +34,9 @@ export class TagMatcher {
 
   // candidates: {location: [strings, best first], tags: [strings in page order]}; libraryTags: [{oid, name}];
   // aliases: [{text, tag}]; ignored: [text] to skip, as whole tags or as words of a longer tag.
-  // Returns {oids, unmatched}: the location's tag first (first candidate that exists), then the page tags left to right. A tag with no
-  // whole match is split into words and each word that matches a library tag is applied; the rest are listed as unmatched.
+  // Returns {oids, unmatched, create}: create lists alias target names the library lacks (deduped, to be created by the caller);
+  // the location's tag first (first candidate that exists), then the page tags left to right. Tags are matched whole (or by alias),
+  // never split into words: one with no match is listed as unmatched.
   static match(candidates, libraryTags, aliases = [], ignored = []) {
     const ignoredKeys = new Set(ignored.map(TagMatcher.normalize));
     const isIgnored = text => ignoredKeys.has(TagMatcher.normalize(text));
@@ -44,8 +49,13 @@ export class TagMatcher {
 
     const oids = [];
     const unmatched = [];
+    const create = [];
     const apply = tag => {
-      if (!oids.includes(tag.oid)) {
+      if (tag.create) {
+        if (!create.some(name => TagMatcher.normalize(name) === TagMatcher.normalize(tag.create))) {
+          create.push(tag.create);
+        }
+      } else if (!oids.includes(tag.oid)) {
         oids.push(tag.oid);
       }
     };
@@ -75,17 +85,13 @@ export class TagMatcher {
         apply(whole);
         continue;
       }
-      const wordTags = words.map(word => TagMatcher.resolve(word, index, aliasMap));
-      if (words.length === 1 || wordTags.every(tag => !tag)) {
-        unmatched.push(TagMatcher.formatUnmatched(text));
-        continue;
-      }
-      words.forEach((word, i) => wordTags[i] ? apply(wordTags[i]) : unmatched.push(word));
+      unmatched.push(TagMatcher.formatUnmatched(text));
     }
 
     const seen = new Set();
     return {
       oids,
+      create,
       unmatched: unmatched.filter(text => !seen.has(text.toLowerCase()) && seen.add(text.toLowerCase())),
     };
   }

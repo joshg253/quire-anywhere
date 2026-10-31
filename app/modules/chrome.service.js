@@ -39,6 +39,12 @@ export class ChromeService {
                 console.log("Context menu item created!", contextMenuIds[contextMenuType], contextMenuProperties);
             }
         }
+        for (const {id, context, title} of Object.values(ChromeConstants.LINKS_MENUS)) {
+            const properties = {title, contexts: [context]};
+            if (!(await this.isContextMenuItemPresent(id, properties))) {
+                contextMenuIds[id] = this.createContextMenuItem({...properties, id});
+            }
+        }
         await StorageService.saveLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS, JSON.stringify(contextMenuIds));
     }
 
