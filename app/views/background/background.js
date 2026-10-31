@@ -23,10 +23,11 @@ async function openLinksDialog(tab, selectionOnly) {
   } catch (e) {
     console.warn("Could not collect links", e);
   }
+  const id = crypto.randomUUID();
   await chrome.storage.session.set({
-    [StorageConstants.SESSION.PENDING_LINKS]: {pageUrl: tab.url, pageTitle: tab.title, links, selectedByDefault: selectionOnly},
+    [StorageConstants.SESSION.PENDING_LINKS + id]: {pageUrl: tab.url, pageTitle: tab.title, links, selectedByDefault: selectionOnly},
   });
-  chrome.windows.create({url: chrome.runtime.getURL("/views/links/links.html"), type: "popup", width: 760, height: 720});
+  chrome.windows.create({url: chrome.runtime.getURL(`/views/links/links.html?id=${id}`), type: "popup", width: 760, height: 720});
 }
 
 function onContextMenuClickedHandler(info, tab) {

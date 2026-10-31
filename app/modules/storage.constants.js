@@ -21,7 +21,7 @@ export class StorageConstants {
         LINKS_TITLE_SOURCE: "links_title_source",  // "text" | "url" for the batch dialog
     };
     static SESSION = {
-        PENDING_LINKS: "pending_links",
+        PENDING_LINKS: "pending_links_",  // + the dialog's id, so two open dialogs never share a batch
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',

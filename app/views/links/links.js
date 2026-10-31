@@ -4,7 +4,8 @@ import {StorageConstants} from "../../modules/storage.constants.js";
 import {SiteRulesService} from "../../modules/site.rules.service.js";
 import {AdapterRegistry} from "../../modules/adapter.registry.js";
 
-const pending = (await chrome.storage.session.get(StorageConstants.SESSION.PENDING_LINKS))[StorageConstants.SESSION.PENDING_LINKS];
+const pendingKey = StorageConstants.SESSION.PENDING_LINKS + new URLSearchParams(location.search).get("id");
+const pending = (await chrome.storage.session.get(pendingKey))[pendingKey];
 const links = pending?.links ?? [];
 const linkBoxes = new Map();  // link -> checkbox
 const nodes = [];  // {box, leaves: [link checkboxes]} for every group and subdomain checkbox
@@ -134,11 +135,12 @@ $("#add").on("click", async () => {
   const origins = [...new Set(enrichable.map(link => info.get(link).origin))];
   const granted = origins.length === 0 || await chrome.permissions.request({origins}).catch(() => false);
   enrichable.forEach(link => link.enrich = granted);
-  $("#add, #select-all, #select-none, input").prop("disabled", true);
+  $("#add, #select-all, #select-none, #close, input").prop("disabled", true);
   const {added, failed, aborted} = await ApiDataService.addLinkTasks(
       chosen,
       {pageTitle: pending.pageTitle, pageUrl: pending.pageUrl, titleSource: titleSource()},
       (done, total, failures) => $("#status").text(`Adding ${done} of ${total}` + (failures ? ` (${failures} failed)` : "") + "…"));
+  $("#close").prop("disabled", false);
   $("#status").text(`Added ${added} of ${chosen.length}` + (failed ? `, ${failed} failed` : "")
       + (granted ? "" : ". Permission for enrichment was denied, so those were added as plain links")
       + (aborted ? ". Stopped after repeated failures (rate limit or expired login?); the rest were not tried" : "") + ".");

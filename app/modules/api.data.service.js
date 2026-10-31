@@ -46,7 +46,12 @@ export class ApiDataService {
     const url = ApiConfig.getProjectTagsUrl.replace("{projectOid}", projectId);
     const token = await this.getToken();
     return new Promise(resolve => {
-      ApiHttpService.getFromQuire(url, token, response => resolve(Array.isArray(response) ? response : null));
+      ApiHttpService.getFromQuire(url, token, response => {
+        if (!Array.isArray(response)) {
+          console.warn("Could not load the project's tags", response);
+        }
+        resolve(Array.isArray(response) ? response : null);
+      });
     });
   }
 
@@ -54,13 +59,16 @@ export class ApiDataService {
   static createProjectTag(projectId, name) {
     const key = `${projectId}/${TagMatcher.normalize(name)}`;
     if (!this._tagCreations.has(key)) {
-      this._tagCreations.set(key, (async () => {
+      const creation = (async () => {
         const url = ApiConfig.createTagUrl.replace("{projectOid}", projectId);
         const token = await this.getToken();
         return new Promise(resolve => {
           ApiHttpService.postToQuire(url, token, "Bearer", JSON.stringify({name}), created => resolve(created?.oid ?? null));
         });
-      })());
+      })();
+      this._tagCreations.set(key, creation);
+      // A failure isn't remembered, so the next task retries
+      creation.then(oid => oid || this._tagCreations.delete(key));
     }
     return this._tagCreations.get(key);
   }
@@ -85,7 +93,8 @@ export class ApiDataService {
           resolve(false);
           return;
         }
-        await StorageService.addTaskToHistory(created);
+        // The task exists either way; a history failure only costs the notification's click target
+        await StorageService.addTaskToHistory(created).catch(e => console.warn("Could not save the task history", e));
         if (notify) {
           ChromeService.createNotification(
               created.oid,

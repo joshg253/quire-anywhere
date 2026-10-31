@@ -78,8 +78,9 @@ export class AdapterRegistry {
   // Loads the URL in a background tab, enriches it like enrichTab, and closes the tab. -> {tab, enriched}, or null if the page didn't load
   // in time or the adapter found nothing. Needs host permission for the URL (the batch dialog requests it).
   static async enrichInBackgroundTab(url, timeoutMs = 20000) {
-    const created = await chrome.tabs.create({url, active: false});
+    let created = null;
     try {
+      created = await chrome.tabs.create({url, active: false});
       await new Promise((resolve, reject) => {
         const done = (err) => {
           clearTimeout(timer);
@@ -108,7 +109,9 @@ export class AdapterRegistry {
       console.warn("Background enrichment failed", url, e);
       return null;
     } finally {
-      chrome.tabs.remove(created.id).catch(() => {});
+      if (created) {
+        chrome.tabs.remove(created.id).catch(() => {});
+      }
     }
   }
 
