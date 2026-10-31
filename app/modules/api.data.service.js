@@ -9,6 +9,8 @@ import {AdapterRegistry} from "./adapter.registry.js";
 import {TagMatcher} from "./tag.matcher.js";
 
 export class ApiDataService {
+  static _tagCreations = new Map();
+
   constructor() {}
 
   // GET FROM STORAGE
@@ -44,8 +46,31 @@ export class ApiDataService {
     const url = ApiConfig.getProjectTagsUrl.replace("{projectOid}", projectId);
     const token = await this.getToken();
     return new Promise(resolve => {
-      ApiHttpService.getFromQuire(url, token, response => resolve(Array.isArray(response) ? response : null));
+      ApiHttpService.getFromQuire(url, token, response => {
+        if (!Array.isArray(response)) {
+          console.warn("Could not load the project's tags", response);
+        }
+        resolve(Array.isArray(response) ? response : null);
+      });
     });
+  }
+
+  // Creates a tag in the project (one request per project and name, even when tasks are added concurrently). -> its oid, or null
+  static createProjectTag(projectId, name) {
+    const key = `${projectId}/${TagMatcher.normalize(name)}`;
+    if (!this._tagCreations.has(key)) {
+      const creation = (async () => {
+        const url = ApiConfig.createTagUrl.replace("{projectOid}", projectId);
+        const token = await this.getToken();
+        return new Promise(resolve => {
+          ApiHttpService.postToQuire(url, token, "Bearer", JSON.stringify({name}), created => resolve(created?.oid ?? null));
+        });
+      })();
+      this._tagCreations.set(key, creation);
+      // A failure isn't remembered, so the next task retries
+      creation.then(oid => oid || this._tagCreations.delete(key));
+    }
+    return this._tagCreations.get(key);
   }
 
   static async getAllProjects(projectsFunction) {
@@ -56,7 +81,7 @@ export class ApiDataService {
   }
 
   // POST TO QUIRE
-  static async postTaskIntoProject(task, project_id) {
+  static async postTaskIntoProject(task, project_id, notify = true) {
     const url = ApiConfig.postNewTaskUrl.replace("{projectId}", project_id);
     const allProjects = JSON.parse(await StorageService.readLocal(StorageConstants.QUIRE.ALL_PROJECTS));
     const defaultProjName = allProjects[project_id].name;
@@ -68,12 +93,15 @@ export class ApiDataService {
           resolve(false);
           return;
         }
-        await StorageService.addTaskToHistory(created);
-        ChromeService.createNotification(
-            created.oid,
-            `Task added`,
-            `to ${defaultProjName}\nClick to open`
-        );
+        // The task exists either way; a history failure only costs the notification's click target
+        await StorageService.addTaskToHistory(created).catch(e => console.warn("Could not save the task history", e));
+        if (notify) {
+          ChromeService.createNotification(
+              created.oid,
+              `Task added`,
+              `to ${defaultProjName}\nClick to open`
+          );
+        }
         resolve(true);
       });
     });
@@ -94,13 +122,28 @@ export class ApiDataService {
     console.log("Adding page to Quire...");
     const defaultProjId = await this.getDefaultProjectId();
     const proj_id = await AdapterRegistry.resolveProjectId(tab.url, defaultProjId);
-    const {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} = await AdapterRegistry.enrichTab(tab);
+    await this.postEnrichedTask(tab, proj_id, await AdapterRegistry.enrichTab(tab), true);
+    // debug
+    console.log(`Page url: ${tab.url}`);
+    console.log(`Page title: ${tab.title}`);
+    console.log(`Access token: ${this._accessToken}`);
+    console.log("org_id" + await this.getDefaultOrganizationId());
+    console.log(`proj_id: ${proj_id}`);
+  }
+
+  // Posts the tab's page as a task with what the adapter found, retrying with less when Quire rejects it. -> whether a task was created
+  static async postEnrichedTask(tab, proj_id, {fields, links, customFields, tagCandidates, title, aliases, ignoredTags}, notify) {
     const pageUrl = await AdapterRegistry.cleanUrl(tab.url);
     let description = [pageUrl, ...links].join("\n");
     if (tagCandidates) {
       const projectTags = await this.getProjectTags(proj_id);
       if (projectTags) {
-        const {oids, unmatched} = TagMatcher.match(tagCandidates, projectTags, aliases, ignoredTags);
+        const {oids, unmatched, create} = TagMatcher.match(tagCandidates, projectTags, aliases, ignoredTags);
+        // Only tags the user named as an alias target are created; one that can't be created is listed with the unmatched
+        for (const name of create) {
+          const oid = await this.createProjectTag(proj_id, name);
+          oid ? oids.push(oid) : unmatched.push(name);
+        }
         if (oids.length > 0) {
           fields.tags = oids;
         }
@@ -118,17 +161,12 @@ export class ApiDataService {
     for (const attempt of attempts) {
       const task = new Task(title ?? tab.title, attempt.description);
       task.addFields(attempt.fields);
-      if (await ApiDataService.postTaskIntoProject(task, proj_id)) {
-        break;
+      if (await ApiDataService.postTaskIntoProject(task, proj_id, notify)) {
+        return true;
       }
       console.warn("Retrying with fewer fields");
     }
-    // debug
-    console.log(`Page url: ${tab.url}`);
-    console.log(`Page title: ${tab.title}`);
-    console.log(`Access token: ${this._accessToken}`);
-    console.log("org_id" + await this.getDefaultOrganizationId());
-    console.log(`proj_id: ${proj_id}`);
+    return false;
   }
 
   static async addSelectionTask(info, tab) {
@@ -160,6 +198,47 @@ export class ApiDataService {
     console.log(`Access token: ${this._accessToken}`);
     console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
+  }
+
+  // One task per link, with no per-task notification; onProgress(done, total, failed) after each. Links marked `enrich` are loaded in
+  // background tabs (ENRICH_CONCURRENCY at a time) and posted like a page task, falling back to a plain link task; the rest are posted
+  // one at a time. Gives up after MAX_CONSECUTIVE_FAILURES in a row (rate limit, expired login). titleSource "text" uses the link text,
+  // falling back to the URL. -> {added, failed, aborted}
+  static async addLinkTasks(links, {pageTitle, pageUrl, titleSource}, onProgress) {
+    const MAX_CONSECUTIVE_FAILURES = 3;
+    const ENRICH_CONCURRENCY = 3;
+    const defaultProjId = await this.getDefaultProjectId();
+    const cleanPageUrl = await AdapterRegistry.cleanUrl(pageUrl);
+    let added = 0, failed = 0, streak = 0, next = 0;
+
+    const addOne = async (link) => {
+      const projId = await AdapterRegistry.resolveProjectId(link.url, defaultProjId);
+      const enrichment = link.enrich ? await AdapterRegistry.enrichInBackgroundTab(link.url) : null;
+      if (enrichment && await this.postEnrichedTask(enrichment.tab, projId, enrichment.enriched, false)) {
+        return true;
+      }
+      const url = await AdapterRegistry.cleanUrl(link.url);
+      const task = new Task(titleSource === "text" && link.text ? link.text : url, `${url}
+
+From: ${pageTitle} - ${cleanPageUrl}`);
+      return ApiDataService.postTaskIntoProject(task, projId, false);
+    };
+    const worker = async () => {
+      while (next < links.length && streak < MAX_CONSECUTIVE_FAILURES) {
+        if (await addOne(links[next++])) {
+          added++;
+          streak = 0;
+        } else {
+          failed++;
+          streak++;
+        }
+        onProgress?.(added + failed, links.length, failed);
+      }
+    };
+    // Plain links go through one worker (like before); with enrichment, a few at a time since each waits on a page load
+    const workers = links.some(link => link.enrich) ? ENRICH_CONCURRENCY : 1;
+    await Promise.all(Array.from({length: workers}, worker));
+    return {added, failed, aborted: streak >= MAX_CONSECUTIVE_FAILURES};
   }
 
   static getExpireInAsDateString(expires_in) {

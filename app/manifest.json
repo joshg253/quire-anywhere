@@ -18,6 +18,9 @@
     "https://docs.google.com/*",
     "https://api.augmentedsteam.com/*"
   ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
   "options_page": "./views/settings/settings.html",
   "background": {
     "service_worker": "./views/background/background.js",

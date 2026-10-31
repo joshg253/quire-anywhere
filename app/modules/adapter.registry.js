@@ -15,7 +15,9 @@ import {renderTemplate} from "./adapter.utils.js";
 // tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases and ignored tags for the adapter in Settings.
 const adapters = [BandcampAdapter, HltbAdapter, SteamAdapter, EpicAdapter, SpotifyAdapter];
 
-const EMPTY = () => ({fields: {}, links: [], customFields: {}, tagCandidates: null, title: null, aliases: [], ignoredTags: []});
+const RENDER_WAIT_MS = 10000;
+
+const EMPTY =() => ({fields: {}, links: [], customFields: {}, tagCandidates: null, title: null, aliases: [], ignoredTags: []});
 
 export class AdapterRegistry {
   static get adapters() {
@@ -65,6 +67,52 @@ export class AdapterRegistry {
   static customFields(settings, values) {
     const rows = settings.fields.map(({name, template}) => [name, renderTemplate(template, values)]);
     return Object.fromEntries(rows.filter(([name, text]) => name && text));
+  }
+
+  // The enabled adapter that would enrich the URL, or null (its site is covered and it applies to this page).
+  static async enrichingAdapter(url) {
+    const found = await AdapterRegistry.findSite(url);
+    return found && (!found.adapter.matchesPage || found.adapter.matchesPage(url)) ? found.adapter : null;
+  }
+
+  // Loads the URL in a background tab, enriches it like enrichTab, and closes the tab. -> {tab, enriched}, or null if the page didn't load
+  // in time or the adapter found nothing. Needs host permission for the URL (the batch dialog requests it).
+  static async enrichInBackgroundTab(url, timeoutMs = 20000) {
+    let created = null;
+    try {
+      created = await chrome.tabs.create({url, active: false});
+      await new Promise((resolve, reject) => {
+        const done = (err) => {
+          clearTimeout(timer);
+          chrome.tabs.onUpdated.removeListener(listener);
+          err ? reject(err) : resolve();
+        };
+        const listener = (tabId, change) => tabId === created.id && change.status === "complete" && done();
+        const timer = setTimeout(() => done(new Error("page load timed out")), timeoutMs);
+        chrome.tabs.onUpdated.addListener(listener);
+        chrome.tabs.get(created.id).then(tab => tab.status === "complete" && done());
+      });
+      // Single-page apps (Spotify) render after the load event, so an empty result is retried until the deadline
+      const deadline = Date.now() + RENDER_WAIT_MS;
+      for (;;) {
+        const tab = await chrome.tabs.get(created.id);
+        const enriched = await AdapterRegistry.enrichTab(tab);
+        if (enriched.title !== null || Object.keys(enriched.fields).length > 0) {
+          return {tab, enriched};
+        }
+        if (Date.now() >= deadline) {
+          return null;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (e) {
+      console.warn("Background enrichment failed", url, e);
+      return null;
+    } finally {
+      if (created) {
+        chrome.tabs.remove(created.id).catch(() => {});
+      }
+    }
   }
 
   // {fields, links, customFields, tagCandidates, title, aliases, ignoredTags} for the tab's page; empty when no enabled adapter applies or

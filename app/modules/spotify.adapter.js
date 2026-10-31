@@ -63,11 +63,23 @@ function spotifyValues(data, options) {
   return {name: data.name, artist, year: data.year, duration: formatDuration(data)};
 }
 
+// Spotify content pages don't need a query, and share links add tracking (si, autoplay_ok, utm_*, context, nd), so all of it goes.
+function cleanSpotifyUrl(url) {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    return parsed.href;
+  } catch (e) {
+    return url;
+  }
+}
+
 export const SpotifyAdapter = {
   id: "spotify",
   category: "Music",
   name: "Spotify",
   hosts: ["open.spotify.com"],
+  cleanUrl: cleanSpotifyUrl,
   matchesPage(url) {
     try {
       return /^\/(album|playlist)\/\w+/.test(new URL(url).pathname);

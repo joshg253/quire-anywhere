@@ -1,0 +1,8 @@
+body { padding-bottom: 56px; }
+#footer { position: fixed; bottom: 0; left: 0; right: 0; }
+.host-row { display: flex; align-items: center; cursor: pointer; }
+.host-row .host-name { flex: 1; font-weight: 500; }
+.link-list { max-height: 18rem; overflow-y: auto; margin-left: 1.5rem; }
+.link-row { display: flex; align-items: baseline; }
+.link-row .url { color: #6c757d; font-size: 80%; margin-left: .5rem; }
+.link-row label { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -18,6 +18,10 @@ export class StorageConstants {
         SITE_RULES: "site_project_rules",
         TAG_ALIASES: "tag_aliases",  // legacy global list, migrated into ADAPTERS
         ADAPTERS: "adapter_settings",
+        LINKS_TITLE_SOURCE: "links_title_source",  // "text" | "url" for the batch dialog
+    };
+    static SESSION = {
+        PENDING_LINKS: "pending_links_",  // + the dialog's id, so two open dialogs never share a batch
     };
     static LOGIN = {
         ATTEMPTING: 'login_attempting',

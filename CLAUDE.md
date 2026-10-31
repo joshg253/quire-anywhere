@@ -6,9 +6,10 @@ General working style, git, and model rules live in `~/.claude/CLAUDE.md` (the c
 
 ## Layout
 - `app/` is the extension root (load unpacked from here). Manifest V3: module service worker, `action`, content script on Google Docs.
-- `app/views/` (popup, settings, background) is UI; `app/modules/` holds services (`api.*`, `login.*`, `chrome.service.js`,
-  `translation.*`, `update.service.js`), storage (`storage.service.js`), and site-specific extraction (`content.utils.js`,
-  `google.docs.utils.js`); `app/models/` holds data models; `app/scripts/content.js` is the content-script entry point.
+- `app/views/` (popup, settings, links dialog, background) is UI; `app/modules/` holds services (`api.*`, `login.*`,
+  `chrome.service.js`, `translation.*`, `update.service.js`), storage (`storage.service.js`), and site-specific extraction
+  (`content.utils.js`, `links.collector.js`, `google.docs.utils.js`); `app/models/` holds data models; `app/scripts/content.js` is the
+  content-script entry point.
 - `app/libraries/` is vendored third-party code (jQuery, Bootstrap, Font Awesome). Never edit it.
 - `quire-anywhere/` is the PHP OAuth relay hosted on zicy.net. `app.secret.php` holds the client secret and is gitignored; never read,
   print, or commit it.

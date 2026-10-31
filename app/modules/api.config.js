@@ -7,6 +7,7 @@ export class ApiConfig {
   static getAllOrganizationsUrl = this.apiUrl + "/organization/list";
   static getAllProjectsUrl = this.apiUrl + '/project/list';
   static getProjectTagsUrl = this.apiUrl + '/tag/list/{projectOid}';
+  static createTagUrl = this.apiUrl + '/tag/{projectOid}';
   static getProjectsByOrganizationUrl = this.apiUrl + '/project/list/{organizationOid}';
 
   // POST

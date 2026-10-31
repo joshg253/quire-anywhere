@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Add links | Quire Anywhere</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../../libraries/bootstrap.min.css">
+  <link rel="stylesheet" href="links.css">
+  <script src="../../libraries/jquery.min.js"></script>
+  <script src="../../libraries/bootstrap.min.js"></script>
+  <script type="module" src="links.js"></script>
+</head>
+<body>
+<div class="container-fluid pt-3">
+  <h5 id="heading">Add links to Quire</h5>
+  <p id="source" class="text-muted small text-truncate mb-2"></p>
+  <p id="empty" class="alert alert-warning d-none">No links found.</p>
+  <div id="controls">
+    <div class="form-inline mb-2">
+      <button id="select-all" type="button" class="btn btn-sm btn-outline-secondary mr-1">Select all</button>
+      <button id="select-none" type="button" class="btn btn-sm btn-outline-secondary mr-3">Select none</button>
+      <span class="mr-2">Task title:</span>
+      <div class="custom-control custom-radio mr-2">
+        <input type="radio" id="title-text" name="title-source" value="text" class="custom-control-input" checked>
+        <label class="custom-control-label" for="title-text">Link text</label>
+      </div>
+      <div class="custom-control custom-radio">
+        <input type="radio" id="title-url" name="title-source" value="url" class="custom-control-input">
+        <label class="custom-control-label" for="title-url">URL</label>
+      </div>
+    </div>
+    <div id="groups"></div>
+  </div>
+</div>
+<div id="footer" class="border-top bg-light p-2">
+  <span id="status" class="mr-3"></span>
+  <button id="add" type="button" class="btn btn-primary btn-sm" disabled>Add</button>
+  <button id="close" type="button" class="btn btn-secondary btn-sm">Close</button>
+</div>
+</body>
+</html>

@@ -58,13 +58,20 @@ export class StorageService {
     }
   }
 
-  static async addTaskToHistory(task) {
-    if (task && task.oid) {
-      const stored = await StorageService.readLocal(StorageConstants.HISTORY.ADDED_TASK_URL_MAP);
-      const addedTasksHistory = stored ? JSON.parse(stored) : {};
-      addedTasksHistory[task.oid] = task.url;
-      await StorageService.saveLocal(StorageConstants.HISTORY.ADDED_TASK_URL_MAP, JSON.stringify(addedTasksHistory));
-    }
+  // Writes are queued: tasks added concurrently (batch) would otherwise overwrite each other's read-modify-write of the map
+  static _historyQueue = Promise.resolve();
+
+  static addTaskToHistory(task) {
+    const write = StorageService._historyQueue.then(async () => {
+      if (task && task.oid) {
+        const stored = await StorageService.readLocal(StorageConstants.HISTORY.ADDED_TASK_URL_MAP);
+        const addedTasksHistory = stored ? JSON.parse(stored) : {};
+        addedTasksHistory[task.oid] = task.url;
+        await StorageService.saveLocal(StorageConstants.HISTORY.ADDED_TASK_URL_MAP, JSON.stringify(addedTasksHistory));
+      }
+    });
+    StorageService._historyQueue = write.catch(() => {});
+    return write;
   }
 
   static async getAddedTaskUrlFromHistoryByOid(oid) {
