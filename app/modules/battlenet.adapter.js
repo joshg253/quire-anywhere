@@ -36,7 +36,7 @@ function cleanBattleNetUrl(url) {
     const family = parsed.searchParams.get("returnFamilyUrl");
     if (family) {
       const target = new URL(family, parsed.origin);
-      if (target.hostname === parsed.hostname) {
+      if (target.origin === parsed.origin && parsed.protocol === "https:" && /^\/[^/]+\/family\/[^/]+\/?$/.test(target.pathname)) {
         target.search = "";
         target.hash = "";
         return target.href;
