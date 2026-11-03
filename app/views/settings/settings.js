@@ -308,7 +308,7 @@ function buildSitesEditor(adapter) {
 }
 
 function placeholderHint(adapter) {
-  return `Available: ${adapter.variables.map(name => `{${name}}`).join(" ")}. A placeholder with no value is left out, with its brackets.`;
+  return `Available: ${adapter.variables.map(name => `{${name}}`).join(" ")}. ${adapter.keepEmptyBrackets ? "A placeholder with no value is left empty, keeping its brackets." : "A placeholder with no value is left out, with its brackets."}`;
 }
 
 function buildTitleEditor(adapter, settings) {
