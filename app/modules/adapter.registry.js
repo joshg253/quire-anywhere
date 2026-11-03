@@ -3,6 +3,7 @@ import {HltbAdapter} from "./hltb.adapter.js";
 import {SteamAdapter} from "./steam.adapter.js";
 import {EpicAdapter} from "./epic.adapter.js";
 import {SpotifyAdapter} from "./spotify.adapter.js";
+import {BattleNetAdapter} from "./battlenet.adapter.js";
 import {AdapterSettingsService} from "./adapter.settings.service.js";
 import {SiteRulesService} from "./site.rules.service.js";
 import {renderTemplate} from "./adapter.utils.js";
@@ -13,7 +14,7 @@ import {renderTemplate} from "./adapter.utils.js";
 // its sites), cleanUrl(url) -> the URL minus tracking parameters (for the task description and link tasks), values(data, options) -> {year, ...} for the title and custom field templates (variables lists their names, defaultTitle its
 // default), defaultFields ([{name, template}] custom field rows), defaultIgnoredTags, tags (fixed tag names to apply), and
 // tagCandidates(data) -> {location, tags}; tagCandidates also turns on tag aliases and ignored tags for the adapter in Settings.
-const adapters = [BandcampAdapter, HltbAdapter, SteamAdapter, EpicAdapter, SpotifyAdapter];
+const adapters = [BandcampAdapter, HltbAdapter, SteamAdapter, EpicAdapter, BattleNetAdapter, SpotifyAdapter];
 
 const RENDER_WAIT_MS = 10000;
 
@@ -136,7 +137,7 @@ export class AdapterRegistry {
         links,
         customFields: AdapterRegistry.customFields(settings, values),
         tagCandidates: adapter.tagCandidates?.(data) ?? (adapter.tags ? {location: [], tags: adapter.tags} : null),
-        title: renderTemplate(settings.titleTemplate, values) || null,
+        title: renderTemplate(settings.titleTemplate, values, adapter.keepEmptyBrackets) || null,
         aliases: settings.aliases,
         ignoredTags: settings.ignoredTags,
       };
