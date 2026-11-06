@@ -42,12 +42,16 @@ General working style, git, and model rules live in `~/.claude/CLAUDE.md` (the c
 - Leave changes in the working tree until I've tested them and say push.
 - On push: run the checklist, then commit. Checklist: state what to check manually in the reloaded extension, then update docs (README,
   CLAUDE.md if rules or layout changed, comments describing changed behavior) and `tmp/TODO.md`.
-- Before starting feature work and before opening a PR, check open issues (`gh issue list`) for related or fixable ones; link them in the
-  PR body (`Fixes #n`) when the change resolves them, and mention related ones that stay open.
 - These steps are enforced by hooks in `.claude/settings.json` (`.claude/hooks/`): `git push` and `gh pr create` are blocked until the
   command ends with `# checklist-done`, and `gh pr create` then reminds you to process review comments. Don't append the marker until the
   checklist is actually done.
-- After opening a PR, and whenever asked, read its review comments (`gh pr view <n> --comments`,
-  `gh api repos/{owner}/{repo}/pulls/<n>/comments`; Sourcery posts here). Fix valid ones on the same branch and report which was which.
+- Sourcery posts review comments on PRs here.
 - Docs-only changes (and supplemental scripts) go straight to `develop` with no PR.
 - Update `README.md` for user-visible changes.
+- Upstream's Vercel OAuth relay change (`upstream/develop`) is on hold: don't merge or fast-forward it until zicy.net login breaks or the
+  extension needs an update.
+
+## Review rules
+This project uses the global independent review (`pr-review` skill). The reviewer checks the diff against the Core rules above, chiefly:
+least privilege (minimum permissions and host permissions), token and client-secret handling, content scripts do extraction only, no
+remote code, and all storage access through `StorageService`.
