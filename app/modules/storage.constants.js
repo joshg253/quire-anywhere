@@ -19,6 +19,7 @@ export class StorageConstants {
         TAG_ALIASES: "tag_aliases",  // legacy global list, migrated into ADAPTERS
         ADAPTERS: "adapter_settings",
         LINKS_TITLE_SOURCE: "links_title_source",  // "text" | "url" for the batch dialog
+        LINKS_IGNORE: "links_ignore",  // which links the batch dialog sets aside, see LinksIgnoreService
     };
     static SESSION = {
         PENDING_LINKS: "pending_links_",  // + the dialog's id, so two open dialogs never share a batch

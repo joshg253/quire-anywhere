@@ -105,6 +105,29 @@
       </div>
     </div>
   </div>
+  <!-- ADD LINKS -->
+  <div class="row">
+    <div class="col-12">
+      <h3 class="border-bottom p-2 mt-4">Add Links</h3>
+      <p class="small text-muted">
+        Links the Add Links dialog sets aside: they are listed at the bottom, unchecked, so you can still tick any of them. A host also
+        covers its subdomains.
+      </p>
+      <div class="custom-control custom-checkbox mb-3">
+        <input type="checkbox" class="custom-control-input" id="links-same-site" checked>
+        <label class="custom-control-label" for="links-same-site">Set aside links to the page's own site (same host, parent domains
+          and subdomains, but not sibling subdomains; on an adapter site like name.bandcamp.com only the parent domains)</label>
+      </div>
+      <div class="form-group">
+        <label for="links-global">Ignore everywhere (one host per line)</label>
+        <textarea class="form-control" id="links-global" rows="4" placeholder="facebook.com"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="links-by-source">Ignore only when adding from a site (one per line: <code>source: host, host</code>; a host covers its subdomains, so <code>*.</code> is optional)</label>
+        <textarea class="form-control" id="links-by-source" rows="4" placeholder="bandcamp.com: reddit.com, twitter.com"></textarea>
+      </div>
+    </div>
+  </div>
   <!-- SITE ADAPTERS -->
   <div id="adapters-container" class="d-none">
     <div class="row">

@@ -84,6 +84,8 @@ export const BandcampAdapter = {
   category: "Music",
   name: "Bandcamp",
   hosts: ["bandcamp.com"],
+  itemPath: /^\/(album|track)\//,  // the Add Links dialog ignores this site's other links (merch, help, ...), and only these pages enrich
+  matchesPage: url => BandcampAdapter.itemPath.test(new URL(url).pathname),
   cleanUrl: cleanBandcampUrl,
   extract: extractBandcampData,
   enrich: enrichBandcampData,
