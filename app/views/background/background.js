@@ -51,7 +51,9 @@ function whenQuireReady(action) {
 
 // Keyboard shortcuts (manifest "commands"; rebindable at chrome://extensions/shortcuts). Invoking one grants activeTab, like a menu click.
 // Unlike the context menu, commands also fire on pages we can't read (chrome://, the Web Store, extension pages), where activeTab gives no URL.
-function onCommandHandler(command, tab) {
+async function onCommandHandler(command, commandTab) {
+  // The tab argument is optional in Chrome's docs; fall back to the active tab
+  const tab = commandTab ?? (await chrome.tabs.query({active: true, currentWindow: true}))[0];
   if (!/^(https?|file):/.test(tab?.url ?? "")) {
     chrome.notifications.create({type: "basic", title: "Quire Anywhere", message: "This page can't be added to Quire.",
       iconUrl: "/images/quire-anywhere-128-opaque.png", silent: true});
