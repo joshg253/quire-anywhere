@@ -15,7 +15,9 @@ export class StorageService {
       console.error("Cannot save undefined value");
       return;
     }
-    await storageCall("sync", "set", {[key]: value});
+    // Rejects when Chrome refuses the write (e.g. over the 8 KB per-item sync quota), so callers can say so instead of reporting a save
+    await new Promise((resolve, reject) => chrome.storage.sync.set({[key]: value},
+        () => chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve()));
   }
 
   static async saveLocal(key, value) {

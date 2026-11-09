@@ -17,15 +17,23 @@ export class LinksIgnoreService {
   }
 
   // Read-modify-write: `change` edits the settings, then hosts are normalized, deduped and sorted.
-  static async update(change) {
-    const settings = await LinksIgnoreService.get();
-    change(settings);
-    settings.global = LinksIgnoreService.cleanHosts(settings.global);
-    for (const source of Object.keys(settings.bySource)) {
-      const hosts = LinksIgnoreService.cleanHosts(settings.bySource[source]);
-      hosts.length ? settings.bySource[source] = hosts : delete settings.bySource[source];
-    }
-    await LinksIgnoreService.save(settings);
+  // Calls on this page run one at a time, so two quick edits can't read the same snapshot and drop one another.
+  static queue = Promise.resolve();
+
+  static update(change) {
+    const run = async () => {
+      const settings = await LinksIgnoreService.get();
+      change(settings);
+      settings.global = LinksIgnoreService.cleanHosts(settings.global);
+      for (const source of Object.keys(settings.bySource)) {
+        const hosts = LinksIgnoreService.cleanHosts(settings.bySource[source]);
+        hosts.length ? settings.bySource[source] = hosts : delete settings.bySource[source];
+      }
+      await LinksIgnoreService.save(settings);
+    };
+    const result = LinksIgnoreService.queue.then(run);
+    LinksIgnoreService.queue = result.catch(() => {});
+    return result;
   }
 
   static cleanHosts(hosts) {
@@ -38,16 +46,19 @@ export class LinksIgnoreService {
   // not navigation; its parent domains are still set aside.
   static reason(settings, linkHost, sourceHost, keepOwnHost = false) {
     const matches = (host, rule) => SiteRulesService.hostMatches(host, rule);
-    if (!linkHost || !sourceHost) {
+    if (!linkHost) {
       return null;
     }
-    const own = matches(linkHost, sourceHost);
-    const parent = linkHost !== sourceHost && matches(sourceHost, linkHost);
+    const own = sourceHost && matches(linkHost, sourceHost);
+    const parent = sourceHost && linkHost !== sourceHost && matches(sourceHost, linkHost);
     if (settings.sameSite && (parent || (own && !keepOwnHost))) {
       return "same site";
     }
     if (settings.global.some(rule => matches(linkHost, rule))) {
       return "ignored everywhere";
+    }
+    if (!sourceHost) {
+      return null;
     }
     for (const [source, hosts] of Object.entries(settings.bySource)) {
       if (matches(sourceHost, source) && hosts.some(rule => matches(linkHost, rule))) {

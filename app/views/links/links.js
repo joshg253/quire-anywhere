@@ -41,7 +41,7 @@ async function buildGroups() {
     const notItem = found?.adapter.itemPath && !found.adapter.itemPath.test(pathOf(link.url));
     const ignoredReason = LinksIgnoreService.reason(ignoreSettings, host, sourceHost, keepOwnHost)
         ?? (notItem ? `not a ${found.adapter.name} item page` : null);
-    const group = (ignoredReason ? IGNORED_PREFIX : "") + (found?.site.host ?? host);
+    const group = (ignoredReason ? `${IGNORED_PREFIX}${ignoredReason}|` : "") + (found?.site.host ?? host);
     info.set(link, {group, host, ignoredReason, adapterName: enrich ? found.adapter.name : null,
       origin: enrich ? `*://*.${found.site.host}/*` : null});
     groups.set(group, [...(groups.get(group) ?? []), link]);
@@ -107,9 +107,14 @@ function renderLink(link, body, nodesToJoin) {
 function ignoreButtons(host) {
   const button = (label, title, change) => $('<button type="button" class="btn btn-sm btn-link py-0"></button>').text(label).attr("title", title)
       .on("click", async function () {
-        await LinksIgnoreService.update(change);
-        $(this).parent().find("button").prop("disabled", true);
-        $(this).text("Saved");
+        const buttons = $(this).parent().find("button");
+        try {
+          await LinksIgnoreService.update(change);
+          buttons.prop("disabled", true);
+          $(this).text("Saved");
+        } catch (e) {
+          $(this).text("Not saved").attr("title", e.message);
+        }
       });
   return $('<span class="ml-3 small"></span>').append(
       sourceHost ? button("Ignore here", `Set ${host} aside whenever you add links from ${sourceHost}`,
@@ -118,7 +123,7 @@ function ignoreButtons(host) {
 }
 
 function renderGroup(key, groupLinks) {
-  const group = key.startsWith(IGNORED_PREFIX) ? key.slice(IGNORED_PREFIX.length) : key;
+  const group = key.startsWith(IGNORED_PREFIX) ? key.slice(key.indexOf("|") + 1) : key;  // ignored keys are "ignored: <reason>|<host>"
   const ignoredReason = info.get(groupLinks[0]).ignoredReason;
   const adapterName = info.get(groupLinks.find(link => info.get(link).adapterName) ?? groupLinks[0]).adapterName;
   let extra = ignoredReason ? $('<span class="ml-3 small text-muted"></span>').text(ignoredReason)

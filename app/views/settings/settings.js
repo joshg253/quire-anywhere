@@ -181,7 +181,7 @@ async function initializeLinksIgnore() {
   render(await LinksIgnoreService.get());
   // Only the changed field is written, so hosts added from the dialog meanwhile aren't overwritten by the other fields
   $("#links-same-site, #links-global, #links-by-source").on("change", async e => {
-    await LinksIgnoreService.update(settings => {
+    await LinksIgnoreService.update(settings => {  // rejects if Chrome refuses the write, which the catch below reports
       if (e.target.id === "links-same-site") {
         settings.sameSite = e.target.checked;
       } else if (e.target.id === "links-global") {
@@ -196,7 +196,7 @@ async function initializeLinksIgnore() {
           }
         }
       }
-    });
+    }).catch(err => alert(`Could not save the Add Links settings: ${err.message}`));
     render(await LinksIgnoreService.get());
   });
 }
