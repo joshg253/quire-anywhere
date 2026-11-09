@@ -36,6 +36,16 @@
       "128": "images/quire-anywhere-128-opaque.png"
     }
   },
+  "commands": {
+    "add-page": {
+      "suggested_key": {"default": "Alt+Shift+Q"},
+      "description": "Add this page to Quire"
+    },
+    "add-links": {
+      "suggested_key": {"default": "Alt+Shift+L"},
+      "description": "Add the links on this page to Quire…"
+    }
+  },
   "content_scripts": [
     {
       "matches": [

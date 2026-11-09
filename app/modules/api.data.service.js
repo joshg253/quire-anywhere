@@ -126,7 +126,6 @@ export class ApiDataService {
     // debug
     console.log(`Page url: ${tab.url}`);
     console.log(`Page title: ${tab.title}`);
-    console.log(`Access token: ${this._accessToken}`);
     console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }
@@ -178,7 +177,6 @@ export class ApiDataService {
     // debug
     console.log("Text: " + info.selectionText);
     console.log("From: " + tab.url);
-    console.log(`Access token: ${this._accessToken}`);
     console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }
@@ -195,7 +193,6 @@ export class ApiDataService {
     // debug
     console.log("Link: " + info.linkUrl);
     console.log("From: " + tab.url);
-    console.log(`Access token: ${this._accessToken}`);
     console.log("org_id" + await this.getDefaultOrganizationId());
     console.log(`proj_id: ${proj_id}`);
   }

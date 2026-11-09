@@ -30,7 +30,8 @@ async function openLinksDialog(tab, selectionOnly) {
   chrome.windows.create({url: chrome.runtime.getURL(`/views/links/links.html?id=${id}`), type: "popup", width: 760, height: 720});
 }
 
-function onContextMenuClickedHandler(info, tab) {
+// Runs `action` once the user is logged in and has a default project; otherwise starts the login or opens Settings instead.
+function whenQuireReady(action) {
   const loginDataService = new LoginDataService();
   loginDataService.isLoggedIn(async function(loggedIn) {
     if (!loggedIn) {
@@ -44,6 +45,29 @@ function onContextMenuClickedHandler(info, tab) {
       chrome.tabs.create({url: chrome.runtime.getURL('/views/settings/settings.html')});
       return;
     }
+    action();
+  });
+}
+
+// Keyboard shortcuts (manifest "commands"; rebindable at chrome://extensions/shortcuts). Invoking one grants activeTab, like a menu click.
+// Unlike the context menu, commands also fire on pages we can't read (chrome://, the Web Store, extension pages), where activeTab gives no URL.
+function onCommandHandler(command, tab) {
+  if (!/^(https?|file):/.test(tab?.url ?? "")) {
+    chrome.notifications.create({type: "basic", title: "Quire Anywhere", message: "This page can't be added to Quire.",
+      iconUrl: "/images/quire-anywhere-128-opaque.png", silent: true});
+    return;
+  }
+  whenQuireReady(() => {
+    if (command === ChromeConstants.COMMANDS.ADD_PAGE) {
+      ApiDataService.addPageTask(tab);
+    } else if (command === ChromeConstants.COMMANDS.ADD_LINKS) {
+      openLinksDialog(tab, false);
+    }
+  });
+}
+
+function onContextMenuClickedHandler(info, tab) {
+  whenQuireReady(async function() {
     const contextMenuEntries = JSON.parse(await StorageService.readLocal(StorageConstants.CONFIG.CONTEXT_MENU_IDS));
     console.log("-------------INFO----------------");
     console.log("contextMenuEntries: ", contextMenuEntries);
@@ -142,6 +166,7 @@ function onAlarmHandler(alarm) {
 
 // All listeners are registered at load (required for MV3 service workers)
 chrome.contextMenus.onClicked.addListener(onContextMenuClickedHandler);
+chrome.commands.onCommand.addListener(onCommandHandler);
 chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
 chrome.alarms.onAlarm.addListener(onAlarmHandler);
