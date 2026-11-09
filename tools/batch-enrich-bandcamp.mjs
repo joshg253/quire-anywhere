@@ -79,7 +79,7 @@ for (const task of work) {
         settings.fields.map(({name, template}) => [name, renderTemplate(template, values)]).filter(([name, text]) => name && text));
     // The script never creates tags, so alias targets missing from the library are listed with the unmatched
     const {oids, unmatched, create} = TagMatcher.match(BandcampAdapter.tagCandidates(data), libraryTags, settings.aliases, settings.ignoredTags);
-    unmatched.push(...create);
+    unmatched.push(...create.filter(name => !unmatched.includes(name)));
     if (oids.length > 0) {
       fields.tags = oids;
     }

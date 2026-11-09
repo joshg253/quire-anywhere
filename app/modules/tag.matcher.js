@@ -28,9 +28,13 @@ export class TagMatcher {
   // applying half of it. -> [tag or {create}] or null
   static split(text, index, aliases) {
     const words = text.trim().split(/\s+/);
+    const dead = new Set();  // start positions the rest can't be matched from, so each is tried once
     const from = start => {
       if (start === words.length) {
         return [];
+      }
+      if (dead.has(start)) {
+        return null;
       }
       for (let end = words.length; end > start; end--) {
         const tags = TagMatcher.resolve(words.slice(start, end).join(" "), index, aliases);
@@ -39,6 +43,7 @@ export class TagMatcher {
           return [...tags, ...rest];
         }
       }
+      dead.add(start);
       return null;
     };
     return from(0);
@@ -117,6 +122,9 @@ export class TagMatcher {
       unmatched.push(TagMatcher.formatUnmatched(text));
     }
 
+    // A page tag that equals a tag we're creating is applied, so it isn't also listed as unmatched
+    const created = new Set(create.map(TagMatcher.normalize));
+    unmatched.splice(0, unmatched.length, ...unmatched.filter(text => !created.has(TagMatcher.normalize(text))));
     const seen = new Set();
     return {
       oids,
