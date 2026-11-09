@@ -7,12 +7,46 @@ export class TagMatcher {
 
   // An alias for the text (not case sensitive) wins over normalization. Its target is the library tag, or {create: name} when the
   // library has none yet (the user named that tag, so it is created); otherwise the text matches the library by itself.
+  // An alias target may name several tags, comma separated ("Indie, rock"), unless the whole target is itself a library tag.
+  // -> [tag or {create}] or null
   static resolve(text, index, aliases) {
-    const target = aliases.get(text.trim().toLowerCase())?.trim();
-    if (target) {
-      return TagMatcher.lookup(target, index) ?? {create: target};
+    const target = (aliases.get(text.trim().toLowerCase()) ?? "").trim();
+    const whole = target && TagMatcher.lookup(target, index);
+    if (whole) {
+      return [whole];
     }
-    return TagMatcher.lookup(text, index);
+    const names = target.split(",").map(name => name.trim()).filter(Boolean);
+    if (names.length > 0) {
+      return names.map(name => TagMatcher.lookup(name, index) ?? {create: name});
+    }
+    const tag = TagMatcher.lookup(text, index);
+    return tag ? [tag] : null;
+  }
+
+  // Splits an unmatched multi-word tag into known pieces, longest first (backing off when the rest can't be matched), each resolved like
+  // a whole tag (so a piece can have its own alias). All or nothing: if any piece is unknown the tag stays unmatched, rather than
+  // applying half of it. -> [tag or {create}] or null
+  static split(text, index, aliases) {
+    const words = text.trim().split(/\s+/);
+    const dead = new Set();  // start positions the rest can't be matched from, so each is tried once
+    const from = start => {
+      if (start === words.length) {
+        return [];
+      }
+      if (dead.has(start)) {
+        return null;
+      }
+      for (let end = words.length; end > start; end--) {
+        const tags = TagMatcher.resolve(words.slice(start, end).join(" "), index, aliases);
+        const rest = tags && from(end);
+        if (rest) {
+          return [...tags, ...rest];
+        }
+      }
+      dead.add(start);
+      return null;
+    };
+    return from(0);
   }
 
   // Two library tags that normalize alike: an exact (case-insensitive) match to the text wins, otherwise none (ambiguous).
@@ -35,8 +69,8 @@ export class TagMatcher {
   // candidates: {location: [strings, best first], tags: [strings in page order]}; libraryTags: [{oid, name}];
   // aliases: [{text, tag}]; ignored: [text] to skip, as whole tags or as words of a longer tag.
   // Returns {oids, unmatched, create}: create lists alias target names the library lacks (deduped, to be created by the caller);
-  // the location's tag first (first candidate that exists), then the page tags left to right. Tags are matched whole (or by alias),
-  // never split into words: one with no match is listed as unmatched.
+  // the location's tag first (first candidate that exists), then the page tags left to right. Tags are matched whole (or by alias); a
+  // multi-word page tag with no match is split into known pieces if every piece resolves, else listed as unmatched.
   static match(candidates, libraryTags, aliases = [], ignored = []) {
     const ignoredKeys = new Set(ignored.map(TagMatcher.normalize));
     const isIgnored = text => ignoredKeys.has(TagMatcher.normalize(text));
@@ -61,9 +95,9 @@ export class TagMatcher {
     };
 
     for (const [i, candidate] of candidates.location.entries()) {
-      const tag = TagMatcher.resolve(candidate, index, aliasMap);
-      if (tag) {
-        apply(tag);
+      const tags = TagMatcher.resolve(candidate, index, aliasMap);
+      if (tags) {
+        tags.forEach(apply);
         break;
       }
       // An alias for the whole location line means the user chose its tag: don't fall back to its parts (e.g. "California" -> CA) if
@@ -80,14 +114,17 @@ export class TagMatcher {
         continue;
       }
       const text = words.join(" ");
-      const whole = TagMatcher.resolve(text, index, aliasMap);
-      if (whole) {
-        apply(whole);
+      const tags = TagMatcher.resolve(text, index, aliasMap) ?? TagMatcher.split(text, index, aliasMap);
+      if (tags) {
+        tags.forEach(apply);
         continue;
       }
       unmatched.push(TagMatcher.formatUnmatched(text));
     }
 
+    // A page tag that equals a tag we're creating is applied, so it isn't also listed as unmatched
+    const created = new Set(create.map(TagMatcher.normalize));
+    unmatched.splice(0, unmatched.length, ...unmatched.filter(text => !created.has(TagMatcher.normalize(text))));
     const seen = new Set();
     return {
       oids,
