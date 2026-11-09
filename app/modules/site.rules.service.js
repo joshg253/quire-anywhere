@@ -12,10 +12,10 @@ export class SiteRulesService {
     await StorageService.saveSync(StorageConstants.SETTINGS.SITE_RULES, JSON.stringify(rules));
   }
 
-  // "https://www.Example.com/a" -> "example.com"; null if it isn't a usable host
+  // "https://www.Example.com/a" -> "example.com" ("*." wildcards are dropped: a host already covers its subdomains); null if it isn't a usable host
   static normalizeHost(input) {
     try {
-      const text = input.trim();
+      const text = input.trim().replace(/^(\w+:\/\/)?\*\./, "$1");  // before parsing: URL percent-encodes the "*"
       return new URL(text.includes("://") ? text : "https://" + text).hostname.replace(/^www\./, "") || null;
     } catch (e) {
       return null;

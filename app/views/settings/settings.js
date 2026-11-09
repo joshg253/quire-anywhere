@@ -5,6 +5,7 @@ import {ChromeService} from "../../modules/chrome.service.js";
 import {SiteRulesService} from "../../modules/site.rules.service.js";
 import {AdapterRegistry} from "../../modules/adapter.registry.js";
 import {AdapterSettingsService} from "../../modules/adapter.settings.service.js";
+import {LinksIgnoreService} from "../../modules/links.ignore.service.js";
 
 
 $('#version').text(ChromeService.getVersionName());
@@ -167,6 +168,39 @@ async function removeSiteRule(host) {
   await SiteRulesService.saveRules((await SiteRulesService.getRules()).filter(rule => rule.host !== host));
   await renderSiteRules();
 }
+
+// ADD LINKS: what the Add Links dialog sets aside. Fields save when they change; hosts are cleaned (normalized, deduped) on save.
+const hostList = value => value.split(/[,\n]/).map(host => host.trim()).filter(Boolean);
+
+async function initializeLinksIgnore() {
+  const render = settings => {
+    $("#links-same-site").prop("checked", settings.sameSite);
+    $("#links-global").val(settings.global.join("\n"));
+    $("#links-by-source").val(Object.entries(settings.bySource).map(([source, hosts]) => `${source}: ${hosts.join(", ")}`).join("\n"));
+  };
+  render(await LinksIgnoreService.get());
+  // Only the changed field is written, so hosts added from the dialog meanwhile aren't overwritten by the other fields
+  $("#links-same-site, #links-global, #links-by-source").on("change", async e => {
+    await LinksIgnoreService.update(settings => {
+      if (e.target.id === "links-same-site") {
+        settings.sameSite = e.target.checked;
+      } else if (e.target.id === "links-global") {
+        settings.global = hostList(e.target.value);
+      } else {
+        settings.bySource = {};
+        for (const line of e.target.value.split("\n")) {
+          const [, source, hosts = ""] = line.match(/^(.*?)(?::\s+(.*))?$/);  // "source: hosts"; a colon inside a URL isn't the separator
+          const key = SiteRulesService.normalizeHost(source);
+          if (key) {
+            settings.bySource[key] = [...(settings.bySource[key] ?? []), ...hostList(hosts)];
+          }
+        }
+      }
+    });
+    render(await LinksIgnoreService.get());
+  });
+}
+initializeLinksIgnore();
 
 // SITE ADAPTERS
 async function renderAdapters() {
