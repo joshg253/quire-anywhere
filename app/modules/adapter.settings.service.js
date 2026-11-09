@@ -5,7 +5,8 @@ import {StorageConstants} from "./storage.constants.js";
 // aliases: [{text, tag}], ignoredTags: [page tag text], options: {<key>: value}}}.
 // Adapters are off until enabled. An enabled adapter owns its default hosts plus the user's extra `sites`; each site's `projId` picks the
 // project (empty = "Default": a matching Site Rule, else the default project). Aliases map page text -> project tag name,
-// e.g. {text: "psychedelic", tag: "psych"}. titleTemplate and the Text custom `fields` use {placeholders} from the adapter's values().
+// e.g. {text: "psychedelic", tag: "psych"}; `tag` may list several, comma separated ("Indie, rock"). titleTemplate and the Text custom
+// `fields` use {placeholders} from the adapter's values().
 export class AdapterSettingsService {
   static async getAll() {
     const stored = await StorageService.readSync(StorageConstants.SETTINGS.ADAPTERS);

@@ -446,7 +446,7 @@ function setAliasTexts(aliases, tag, texts) {
 
 async function buildAliasEditor(adapter) {
   const rows = $("<tbody>");
-  const tagInput = $('<input type="text" class="form-control" placeholder="Your tag, e.g. L.A.">');
+  const tagInput = $('<input type="text" class="form-control" placeholder="Your tag(s), e.g. L.A. or Indie, rock">');
   const textInput = $('<input type="text" class="form-control" placeholder="Page texts, e.g. Los Angeles, California; LA">');
   const invalid = $('<div class="alert alert-danger small d-none" role="alert">Enter your tag and at least one page text.</div>');
   const filter = $('<input type="search" class="form-control form-control-sm mb-2" placeholder="Filter aliases">')
@@ -481,7 +481,7 @@ async function buildAliasEditor(adapter) {
   }
 
   const addButton = $('<button type="button" class="btn btn-outline-primary">Add</button>').on("click", async () => {
-    const tag = tagInput.val().trim();
+    const tag = tagInput.val().split(",").map(name => name.trim()).filter(Boolean).join(", ");
     const texts = splitTexts(textInput.val());
     invalid.toggleClass("d-none", !!(tag && texts.length));
     if (!tag || !texts.length) {
@@ -500,8 +500,9 @@ async function buildAliasEditor(adapter) {
   return $("<div>")
       .append($("<h6>Tag Aliases</h6>"))
       .append($("<p class=\"small text-muted\">When a page's tag or location matches one of the page texts (not case sensitive; separate " +
-          "several with \";\"), your tag is used instead. A matching whole location line like \"Los Angeles, California\" is used " +
-          "before its parts, so it never falls back to just \"California\".</p>"))
+          "several with \";\"), your tag is used instead; list several tags separated by \",\" to apply them all. A multi-word page tag " +
+          "with no match is split into known tags or aliases (\"psychedelic indie rock\") only if every part matches. A matching whole " +
+          "location line like \"Los Angeles, California\" is used before its parts, so it never falls back to just \"California\".</p>"))
       .append(filter)
       .append($('<div style="max-height: 20rem; overflow-y: auto;">').append($('<table class="table table-sm">').append(rows)))
       .append($('<div class="input-group mb-3">').append(tagInput).append(textInput)
